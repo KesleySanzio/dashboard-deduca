@@ -1,22 +1,212 @@
 {
-  "extraidoEm": "2026-07-10T21:21:42.325Z",
-  "indicadores": {
-    "chamadosEmAberto": 10,
-    "chamadosFechados": 5,
-    "chamadosAbertosForaPrazo": 1,
-    "tempoMedioAtendimentoHHMM": "2:30"
-  },
   "abertosFechados": {
-    "total": 15,
-    "abertos": 10,
-    "fechados": 5
+    "abertos": 102,
+    "fechados": 99,
+    "total": 201
   },
-  "rankingAtendimento": [],
-  "chamadosPorDepartamento": [],
-  "chamadosStatus": [],
-  "slaMensal": [],
+  "chamadosPorDepartamento": [
+    {
+      "area": "RES_NED/CEAD_Gestão_do_Ambiente_Virtual",
+      "quantidade": 3
+    }
+  ],
+  "chamadosStatus": [
+    {
+      "nome": "Acumulados",
+      "quantidade": 99
+    },
+    {
+      "nome": "Não resolvidos",
+      "quantidade": 102
+    }
+  ],
+  "extraidoEm": "2026-07-10T21:29:00.745Z",
+  "indicadores": {
+    "chamadosAbertosForaPrazo": 0,
+    "chamadosEmAberto": 102,
+    "chamadosFechados": 99,
+    "satisfacaoCliente": null,
+    "tempoMedioAtendimentoHHMM": "66:82",
+    "tempoMedioAtendimentoHoras": 66.82
+  },
   "mensalAbertosFechados": {
-    "abertos": [],
-    "fechados": []
-  }
+    "abertos": [
+      {
+        "mes": "Jan",
+        "valor": 76
+      },
+      {
+        "mes": "Fev",
+        "valor": 205
+      },
+      {
+        "mes": "Mar",
+        "valor": 287
+      },
+      {
+        "mes": "Abr",
+        "valor": 229
+      },
+      {
+        "mes": "Mai",
+        "valor": 259
+      },
+      {
+        "mes": "Jun",
+        "valor": 301
+      },
+      {
+        "mes": "Jul",
+        "valor": 102
+      },
+      {
+        "mes": "Ago",
+        "valor": 0
+      },
+      {
+        "mes": "Set",
+        "valor": 0
+      },
+      {
+        "mes": "Out",
+        "valor": 0
+      },
+      {
+        "mes": "Nov",
+        "valor": 0
+      },
+      {
+        "mes": "Dez",
+        "valor": 0
+      }
+    ],
+    "fechados": [
+      {
+        "mes": "Jan",
+        "valor": 70
+      },
+      {
+        "mes": "Fev",
+        "valor": 201
+      },
+      {
+        "mes": "Mar",
+        "valor": 284
+      },
+      {
+        "mes": "Abr",
+        "valor": 217
+      },
+      {
+        "mes": "Mai",
+        "valor": 258
+      },
+      {
+        "mes": "Jun",
+        "valor": 299
+      },
+      {
+        "mes": "Jul",
+        "valor": 99
+      },
+      {
+        "mes": "Ago",
+        "valor": 0
+      },
+      {
+        "mes": "Set",
+        "valor": 0
+      },
+      {
+        "mes": "Out",
+        "valor": 0
+      },
+      {
+        "mes": "Nov",
+        "valor": 0
+      },
+      {
+        "mes": "Dez",
+        "valor": 0
+      }
+    ]
+  },
+  "origem": {
+    "empresaId": 5,
+    "grupos": "2875,1940",
+    "url": "https://csc.pucminas.br/Outros/DefaultNovoDashBoard.aspx?Empresaid=5&Userid=12579&Grupos=2875,1940",
+    "userId": 12579
+  },
+  "rankingAtendimento": [
+    {
+      "nome": "Felipe Menezes Rezende",
+      "quantidade": 22
+    },
+    {
+      "nome": "Carlos Henrique Santos da Silva",
+      "quantidade": 13
+    },
+    {
+      "nome": "Bruno Henrique Nunes Morais",
+      "quantidade": 13
+    },
+    {
+      "nome": "Lucas Henrique Batista França",
+      "quantidade": 13
+    },
+    {
+      "nome": "Raylan Bruno Fraga",
+      "quantidade": 12
+    },
+    {
+      "nome": "Aldeir Amâncio dos Santos",
+      "quantidade": 9
+    },
+    {
+      "nome": "Tiago Ferreira da Costa",
+      "quantidade": 8
+    },
+    {
+      "nome": "Glauber Vinicius de Oliveira",
+      "quantidade": 7
+    },
+    {
+      "nome": "Kesley Sanzio Silva Lece",
+      "quantidade": 4
+    },
+    {
+      "nome": "Ana Clara Gil de Souza",
+      "quantidade": 1
+    }
+  ],
+  "slaMensal": [
+    {
+      "mes": "jan",
+      "valor": 82.27
+    },
+    {
+      "mes": "fev",
+      "valor": 90.28
+    },
+    {
+      "mes": "mar",
+      "valor": 90.48
+    },
+    {
+      "mes": "abr",
+      "valor": 92.21
+    },
+    {
+      "mes": "mai",
+      "valor": 92.89
+    },
+    {
+      "mes": "jun",
+      "valor": 90.25
+    },
+    {
+      "mes": "jul",
+      "valor": 93.05
+    }
+  ]
 }
