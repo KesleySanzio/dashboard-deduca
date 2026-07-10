@@ -1,0 +1,22 @@
+{
+  "extraidoEm": "2026-07-10T21:21:42.325Z",
+  "indicadores": {
+    "chamadosEmAberto": 10,
+    "chamadosFechados": 5,
+    "chamadosAbertosForaPrazo": 1,
+    "tempoMedioAtendimentoHHMM": "2:30"
+  },
+  "abertosFechados": {
+    "total": 15,
+    "abertos": 10,
+    "fechados": 5
+  },
+  "rankingAtendimento": [],
+  "chamadosPorDepartamento": [],
+  "chamadosStatus": [],
+  "slaMensal": [],
+  "mensalAbertosFechados": {
+    "abertos": [],
+    "fechados": []
+  }
+}
