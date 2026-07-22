@@ -308,7 +308,7 @@
 
   .kpi-row {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
     margin-bottom: 24px;
   }
@@ -335,6 +335,7 @@
   .kpi-card.green::after { background: var(--green); }
   .kpi-card.yellow::after { background: var(--yellow); }
   .kpi-card.purple::after { background: var(--accent2); }
+  .kpi-card.red::after { background: var(--red); }
 
   .kpi-label {
     font-size: 11px;
@@ -664,6 +665,7 @@
   .kpi-card:nth-child(2) { animation-delay: 0.1s; }
   .kpi-card:nth-child(3) { animation-delay: 0.15s; }
   .kpi-card:nth-child(4) { animation-delay: 0.2s; }
+  .kpi-card:nth-child(5) { animation-delay: 0.25s; }
 
   .num { font-variant-numeric: tabular-nums; }
 
@@ -828,6 +830,7 @@
   /* ===================== RESPONSIVE ===================== */
   @media (max-width: 900px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .kpi-card.red { grid-column: span 2; }
     .grid-2 { grid-template-columns: 1fr; }
     .col-span-2 { grid-column: span 1; }
     .sidebar { width: var(--sidebar-w-collapsed); }
@@ -918,6 +921,11 @@
           <div class="kpi-label">Em Andamento</div>
           <div class="kpi-value num" id="kpi-and">—</div>
           <div class="kpi-sub">tarefas ativas</div>
+        </div>
+        <div class="kpi-card red" onclick="switchSubTabFromKpi('em-aberto')" style="cursor:pointer" title="Ver tarefas em aberto">
+          <div class="kpi-label">Em Aberto</div>
+          <div class="kpi-value num" id="kpi-aberto">—</div>
+          <div class="kpi-sub">aguardando início</div>
         </div>
         <div class="kpi-card purple">
           <div class="kpi-label">Horas Apontadas</div>
@@ -1197,12 +1205,9 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxg93ZrXU8uM9FBVxrsugRa
 const API_TOKEN = "deduca-dashboard-2026";
 
 function scheduleNextRefresh() {
-  const now = new Date();
-  const next = new Date();
-  next.setHours(8, 0, 0, 0);
-  if (now >= next) next.setDate(next.getDate() + 1);
-  const msUntil = next - now;
-  setTimeout(() => { fetchData(); scheduleNextRefresh(); }, msUntil);
+  // Recarrega os dados do dashboard a cada 30 minutos
+  const REFRESH_MS = 30 * 60 * 1000; // 30 minutos
+  setInterval(fetchData, REFRESH_MS);
 }
 
 // ===================== STATE =====================
@@ -1556,11 +1561,24 @@ function updateKPIs() {
     : currentFilter === 'Em Aberto' ? people.reduce((s,p) => s+p.ab, 0)
     : total;
 
+  // Conta tarefas em aberto e desbloqueadas (vêm do rawTaskRows, sem responsável)
+  const emAberto = rawTaskRows.filter(r => {
+    const s = (r['Status'] || '').trim().toLowerCase();
+    return s === 'em aberto' || s === 'aberto' || s === 'open' || s === 'a fazer' || s === 'to do';
+  }).length;
+
   document.getElementById('kpi-total').textContent = fmt(total);
   document.getElementById('kpi-conc').textContent  = fmt(conc);
   document.getElementById('kpi-conc-pct').textContent = pct + '% de conclusão';
   document.getElementById('kpi-and').textContent   = fmt(and);
+  document.getElementById('kpi-aberto').textContent = fmt(emAberto);
   document.getElementById('kpi-horas').textContent = fmt(Math.round(horas)) + 'h';
+}
+
+// Clica no card Em Aberto e navega para a sub-aba
+function switchSubTabFromKpi(tab) {
+  const btn = [...document.querySelectorAll('.sub-tab')].find(b => b.textContent.includes('Em Aberto'));
+  if (btn) switchSubTab(tab, btn);
 }
 
 // ===================== TABLE =====================
