@@ -1227,14 +1227,40 @@ const avatarColors = ["#1a3a6a","#14532d","#78350f","#3b0764","#7f1d1d","#164e63
 function initials(name) {
   return name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
 }
-function fmt(n) { return Number(n).toLocaleString('pt-BR'); }
-function fmtH(h) { return Number(h).toFixed(1).replace('.',',') + 'h'; }
+function fmt(n) {
+  const v = Number(n);
+  return (isFinite(v) ? v : 0).toLocaleString('pt-BR');
+}
+function fmtH(h) {
+  const n = Number(h);
+  return (isFinite(n) ? n : 0).toFixed(1).replace('.',',') + 'h';
+}
 
 function parseHoras(h) {
-  if (!h || h === '') return 0;
-  const parts = String(h).split(':');
-  try { return parseInt(parts[0]) + parseInt(parts[1] || 0) / 60; }
-  catch(e) { return 0; }
+  if (h === null || h === undefined || h === '') return 0;
+
+  // Se já vier como número (ex: 2.5), usa direto
+  if (typeof h === 'number') return isFinite(h) ? h : 0;
+
+  const str = String(h).trim();
+  if (!str) return 0;
+
+  // Formato H:MM ou H:MM:SS
+  if (str.includes(':')) {
+    const parts = str.split(':');
+    const hrs  = parseFloat(parts[0]);
+    const mins = parseFloat(parts[1]);
+    const secs = parseFloat(parts[2]);
+    const H = isFinite(hrs)  ? hrs  : 0;
+    const M = isFinite(mins) ? mins : 0;
+    const S = isFinite(secs) ? secs : 0;
+    const total = H + (M / 60) + (S / 3600);
+    return isFinite(total) ? total : 0;
+  }
+
+  // Número puro em texto (ex: "2,5" ou "2.5")
+  const num = parseFloat(str.replace(',', '.'));
+  return isFinite(num) ? num : 0;
 }
 
 function showLoading(on) {
@@ -1341,6 +1367,36 @@ function formatDate(dateStr) {
   } catch(e) { return '—'; }
 }
 
+// Calcula dias corridos desde uma data até hoje
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d)) return null;
+    const hoje = new Date();
+    // zera horários para contar dias de calendário
+    const d0 = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const h0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const diff = Math.round((h0 - d0) / (1000 * 60 * 60 * 24));
+    return diff >= 0 ? diff : null;
+  } catch(e) { return null; }
+}
+
+// Texto amigável + cor conforme dias
+function tempoTag(dias, prefixo) {
+  if (dias === null) return { texto: prefixo + '—', cor: 'var(--text-muted)', bg: 'rgba(107,122,158,0.1)' };
+  let label;
+  if (dias === 0) label = 'hoje';
+  else if (dias === 1) label = 'há 1 dia';
+  else label = `há ${dias} dias`;
+  // Cores por faixa de tempo (alerta de atraso)
+  let cor, bg;
+  if (dias <= 2)      { cor = 'var(--green)';  bg = 'rgba(34,197,94,0.1)'; }
+  else if (dias <= 5) { cor = 'var(--yellow)'; bg = 'rgba(245,158,11,0.1)'; }
+  else                { cor = 'var(--red)';    bg = 'rgba(239,68,68,0.1)'; }
+  return { texto: prefixo + label, cor, bg };
+}
+
 function renderEmAberto() {
   const projFilter = document.getElementById('filterAbertoProjeto')?.value || '';
   const deptFilter = document.getElementById('filterAbertoDept')?.value  || '';
@@ -1380,6 +1436,7 @@ function renderEmAberto() {
         <div class="task-meta">
           <span class="task-tag task-tag-proj">📁 ${r['Projeto'] || 'Sem projeto'}</span>
           <span class="task-tag task-tag-dept">🏢 ${r['Setor Responsavel'] || '—'}</span>
+          ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏳ Aberta '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto}</span>`; })()}
           ${hasLinks ? '<span class="task-tag" style="background:rgba(79,142,247,0.1);color:var(--accent)">🔗 Links</span>' : ''}
         </div>
       </div>
@@ -1425,6 +1482,7 @@ function renderEmAndamento() {
           <span class="task-tag task-tag-dept">🏢 ${r['Setor Responsavel'] || '—'}</span>
           <span class="task-tag task-tag-person">👤 ${r['Responsavel'] || '—'}</span>
           <span class="task-tag task-tag-date">📅 Assumida em: ${formatDate(r['Inicio'] || '')}</span>
+          ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏱ '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto} com a tarefa</span>`; })()}
           ${hasLinks ? '<span class="task-tag" style="background:rgba(79,142,247,0.1);color:var(--accent)">🔗 Links</span>' : ''}
         </div>
       </div>
