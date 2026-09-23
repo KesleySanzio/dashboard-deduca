@@ -6,6 +6,7 @@
 <title>Dashboard · Deduca · CEAD</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #0a0d14;
@@ -862,6 +863,11 @@
       <span class="nav-label">Produtividade</span>
     </div>
 
+    <div class="nav-item" data-page="relatorio" data-label="Relatório Gerencial" onclick="navigateTo('relatorio', this)">
+      <span class="nav-icon">📈</span>
+      <span class="nav-label">Relatório Gerencial</span>
+    </div>
+
     <div class="nav-item" data-page="emails" data-label="E-mails" onclick="navigateTo('emails', this)">
       <span class="nav-icon">📧</span>
       <span class="nav-label">E-mails</span>
@@ -1167,6 +1173,121 @@
       </div>
 
       <footer>Dashboard CSC · Deduca CEAD / Gestão do AVA · Dados via extensão CSC Extrator</footer>
+    </div>
+  </div>
+
+  <!-- PAGE 4: TELEFONE -->
+  <!-- PAGE: RELATÓRIO GERENCIAL -->
+  <div class="page" id="page-relatorio">
+    <div class="container">
+      <header>
+        <div class="logo-area">
+          <h1>Relatório <span>·</span> Gerencial</h1>
+          <p>Produções por período — CEAD / Gestão do AVA</p>
+          <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;flex-wrap:wrap;align-items:center">
+            <span id="relStatus" style="color:var(--text-muted)">● Carregando dados...</span>
+          </div>
+        </div>
+        <div class="badge-setor">CEAD / Gestão do AVA</div>
+      </header>
+
+      <!-- Seletor de período + exportar -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text-muted);font-weight:500">Período:</span>
+        <select id="relTipoPeriodo" onchange="onRelTipoChange()" class="task-select" style="min-width:140px">
+          <option value="semestral">Semestral</option>
+          <option value="anual">Anual</option>
+          <option value="total">Total (geral)</option>
+        </select>
+        <select id="relPeriodo" onchange="renderRelatorio()" class="task-select" style="min-width:170px"></select>
+        <button onclick="exportarRelatorioExcel()" style="
+          margin-left:auto;
+          background:rgba(34,197,94,0.12);
+          border:1px solid rgba(34,197,94,0.35);
+          border-radius:8px;
+          color:var(--green);
+          font-size:13px;
+          font-family:'DM Sans',sans-serif;
+          font-weight:500;
+          padding:8px 16px;
+          cursor:pointer;
+          transition:all 0.2s;
+          display:flex;align-items:center;gap:6px;
+        " onmouseover="this.style.background='rgba(34,197,94,0.2)'" onmouseout="this.style.background='rgba(34,197,94,0.12)'">
+          ⬇ Exportar Excel
+        </button>
+      </div>
+
+      <!-- KPIs do relatório -->
+      <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi-card blue">
+          <div class="kpi-label">Total de Produções</div>
+          <div class="kpi-value num" id="rel-total">—</div>
+          <div class="kpi-sub" id="rel-periodo-label">—</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Concluídas</div>
+          <div class="kpi-value num" id="rel-conc">—</div>
+          <div class="kpi-sub" id="rel-conc-pct">— de conclusão</div>
+        </div>
+        <div class="kpi-card yellow">
+          <div class="kpi-label">Em Andamento + Aberto</div>
+          <div class="kpi-value num" id="rel-pend">—</div>
+          <div class="kpi-sub">pendentes</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Horas Apontadas</div>
+          <div class="kpi-value num" id="rel-horas">—</div>
+          <div class="kpi-sub">no período</div>
+        </div>
+      </div>
+
+      <!-- Produções por pessoa -->
+      <div class="section-title">Produções por Pessoa</div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="overflow-x:auto">
+          <table class="people-table" id="relTabelaPessoas">
+            <thead>
+              <tr>
+                <th>Colaborador</th>
+                <th style="text-align:center">Total</th>
+                <th style="text-align:center">Concluídas</th>
+                <th style="text-align:center">Taxa</th>
+                <th style="text-align:center">Horas</th>
+              </tr>
+            </thead>
+            <tbody id="relBodyPessoas"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Produções por projeto e departamento -->
+      <div class="grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">Produções por Projeto</div>
+          <div style="overflow-x:auto">
+            <table class="people-table" id="relTabelaProjetos">
+              <thead>
+                <tr><th>Projeto</th><th style="text-align:center">Total</th><th style="text-align:center">Concl.</th></tr>
+              </thead>
+              <tbody id="relBodyProjetos"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Produções por Departamento</div>
+          <div style="overflow-x:auto">
+            <table class="people-table" id="relTabelaDepts">
+              <thead>
+                <tr><th>Departamento</th><th style="text-align:center">Total</th><th style="text-align:center">Concl.</th></tr>
+              </thead>
+              <tbody id="relBodyDepts"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <footer>Relatório Gerencial · Deduca CEAD / Gestão do AVA · Referência: coluna Início</footer>
     </div>
   </div>
 
@@ -2022,7 +2143,258 @@ const _origNavigateTo = navigateTo;
 navigateTo = function(page, el) {
   _origNavigateTo(page, el);
   if (page === 'csc') fetchCscData();
+  if (page === 'relatorio') initRelatorio();
 };
+
+// ===================== RELATÓRIO GERENCIAL =====================
+let relInited = false;
+
+function getSemestreKey(dateStr) {
+  if (!dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d)) return null;
+    const sem = d.getMonth() < 6 ? 1 : 2; // Jan-Jun=1, Jul-Dez=2
+    return `${d.getFullYear()}-S${sem}`;
+  } catch(e) { return null; }
+}
+
+function getAnoKey(dateStr) {
+  if (!dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d)) return null;
+    return String(d.getFullYear());
+  } catch(e) { return null; }
+}
+
+function labelSemestre(key) {
+  const [ano, s] = key.split('-S');
+  return `${s}º Semestre ${ano}`;
+}
+
+function initRelatorio() {
+  if (!rawTaskRows || rawTaskRows.length === 0) {
+    document.getElementById('relStatus').textContent = '⚠ Aguardando dados da planilha';
+    document.getElementById('relStatus').style.color = '#f59e0b';
+    return;
+  }
+  document.getElementById('relStatus').textContent = '● Dados carregados';
+  document.getElementById('relStatus').style.color = '#22c55e';
+  onRelTipoChange();
+}
+
+function onRelTipoChange() {
+  const tipo = document.getElementById('relTipoPeriodo').value;
+  const sel = document.getElementById('relPeriodo');
+
+  if (tipo === 'total') {
+    sel.style.display = 'none';
+    renderRelatorio();
+    return;
+  }
+  sel.style.display = '';
+
+  // Coleta períodos disponíveis a partir da coluna Inicio
+  const keys = new Set();
+  rawTaskRows.forEach(r => {
+    const k = tipo === 'semestral' ? getSemestreKey(r['Inicio']||'') : getAnoKey(r['Inicio']||'');
+    if (k) keys.add(k);
+  });
+
+  const ordenadas = [...keys].sort().reverse();
+  sel.innerHTML = ordenadas.map(k => {
+    const label = tipo === 'semestral' ? labelSemestre(k) : `Ano ${k}`;
+    return `<option value="${k}">${label}</option>`;
+  }).join('');
+
+  renderRelatorio();
+}
+
+// Filtra linhas conforme período selecionado e agrega
+function agregarRelatorio() {
+  const tipo = document.getElementById('relTipoPeriodo').value;
+  const periodo = document.getElementById('relPeriodo').value;
+
+  const filtradas = rawTaskRows.filter(r => {
+    if (tipo === 'total') return true;
+    const k = tipo === 'semestral' ? getSemestreKey(r['Inicio']||'') : getAnoKey(r['Inicio']||'');
+    return k === periodo;
+  });
+
+  const pessoas = {};
+  const projetos = {};
+  const depts = {};
+  let total = 0, conc = 0, and = 0, ab = 0, horas = 0;
+
+  filtradas.forEach(r => {
+    const status = r['Status'] || '';
+    const resp = r['Responsavel'] || 'Não definido';
+    const proj = r['Projeto'] || 'Sem projeto';
+    const dept = r['Setor Responsavel'] || '—';
+    const h = parseHoras(r['Horas Apontadas'] || '');
+
+    total++;
+    horas += h;
+    if (status === 'Concluído') conc++;
+    else if (status === 'Em Andamento') and++;
+    else ab++;
+
+    // Pessoas (só com responsável definido)
+    if (resp && resp !== 'Não definido') {
+      if (!pessoas[resp]) pessoas[resp] = { name: resp, total: 0, conc: 0, horas: 0 };
+      pessoas[resp].total++;
+      pessoas[resp].horas += h;
+      if (status === 'Concluído') pessoas[resp].conc++;
+    }
+
+    // Projetos
+    if (!projetos[proj]) projetos[proj] = { name: proj, total: 0, conc: 0 };
+    projetos[proj].total++;
+    if (status === 'Concluído') projetos[proj].conc++;
+
+    // Departamentos
+    if (!depts[dept]) depts[dept] = { name: dept, total: 0, conc: 0 };
+    depts[dept].total++;
+    if (status === 'Concluído') depts[dept].conc++;
+  });
+
+  return {
+    kpi: { total, conc, and, ab, horas, pend: and + ab },
+    pessoas: Object.values(pessoas).sort((a,b) => b.total - a.total),
+    projetos: Object.values(projetos).sort((a,b) => b.total - a.total),
+    depts: Object.values(depts).sort((a,b) => b.total - a.total),
+  };
+}
+
+function labelPeriodoAtual() {
+  const tipo = document.getElementById('relTipoPeriodo').value;
+  if (tipo === 'total') return 'Todos os períodos';
+  const periodo = document.getElementById('relPeriodo').value;
+  if (tipo === 'semestral') return labelSemestre(periodo);
+  return `Ano ${periodo}`;
+}
+
+function renderRelatorio() {
+  if (!rawTaskRows || rawTaskRows.length === 0) return;
+  const d = agregarRelatorio();
+  const k = d.kpi;
+  const pct = k.total > 0 ? ((k.conc / k.total) * 100).toFixed(1).replace('.',',') : '0,0';
+
+  document.getElementById('rel-total').textContent      = fmt(k.total);
+  document.getElementById('rel-conc').textContent       = fmt(k.conc);
+  document.getElementById('rel-conc-pct').textContent   = pct + '% de conclusão';
+  document.getElementById('rel-pend').textContent       = fmt(k.pend);
+  document.getElementById('rel-horas').textContent      = fmt(Math.round(k.horas)) + 'h';
+  document.getElementById('rel-periodo-label').textContent = labelPeriodoAtual();
+
+  // Tabela pessoas
+  document.getElementById('relBodyPessoas').innerHTML = d.pessoas.map(p => {
+    const tx = p.total > 0 ? ((p.conc/p.total)*100).toFixed(0) : 0;
+    return `<tr>
+      <td class="person-name">${p.name}</td>
+      <td style="text-align:center" class="num">${p.total}</td>
+      <td style="text-align:center;color:var(--green)" class="num">${p.conc}</td>
+      <td style="text-align:center" class="num">${tx}%</td>
+      <td style="text-align:center;color:var(--text-muted)" class="num">${fmtH(p.horas)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:20px">Nenhuma produção no período.</td></tr>';
+
+  // Tabela projetos
+  document.getElementById('relBodyProjetos').innerHTML = d.projetos.map(p => `
+    <tr>
+      <td>${p.name}</td>
+      <td style="text-align:center" class="num">${p.total}</td>
+      <td style="text-align:center;color:var(--green)" class="num">${p.conc}</td>
+    </tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-dim);padding:20px">—</td></tr>';
+
+  // Tabela departamentos
+  document.getElementById('relBodyDepts').innerHTML = d.depts.map(p => `
+    <tr>
+      <td>${p.name}</td>
+      <td style="text-align:center" class="num">${p.total}</td>
+      <td style="text-align:center;color:var(--green)" class="num">${p.conc}</td>
+    </tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-dim);padding:20px">—</td></tr>';
+}
+
+// ---- Exportação Excel (uma aba por recorte) ----
+function montarAbaExcel(tipo, periodo) {
+  // Filtra
+  const filtradas = rawTaskRows.filter(r => {
+    if (tipo === 'total') return true;
+    const k = tipo === 'semestral' ? getSemestreKey(r['Inicio']||'') : getAnoKey(r['Inicio']||'');
+    return k === periodo;
+  });
+
+  const pessoas = {};
+  let total = 0, conc = 0, and = 0, ab = 0, horas = 0;
+  filtradas.forEach(r => {
+    const status = r['Status'] || '';
+    const resp = r['Responsavel'] || 'Não definido';
+    const h = parseHoras(r['Horas Apontadas'] || '');
+    total++; horas += h;
+    if (status === 'Concluído') conc++;
+    else if (status === 'Em Andamento') and++;
+    else ab++;
+    if (resp && resp !== 'Não definido') {
+      if (!pessoas[resp]) pessoas[resp] = { total: 0, conc: 0, horas: 0 };
+      pessoas[resp].total++;
+      pessoas[resp].horas += h;
+      if (status === 'Concluído') pessoas[resp].conc++;
+    }
+  });
+
+  const rows = [];
+  const rotulo = tipo === 'total' ? 'Total Geral' : (tipo === 'semestral' ? labelSemestre(periodo) : `Ano ${periodo}`);
+  rows.push(['RELATÓRIO GERENCIAL — ' + rotulo]);
+  rows.push([]);
+  rows.push(['RESUMO']);
+  rows.push(['Total de Produções', total]);
+  rows.push(['Concluídas', conc]);
+  rows.push(['Em Andamento', and]);
+  rows.push(['Em Aberto', ab]);
+  rows.push(['Taxa de Conclusão (%)', total>0 ? Number(((conc/total)*100).toFixed(1)) : 0]);
+  rows.push(['Horas Apontadas', Number(horas.toFixed(1))]);
+  rows.push([]);
+  rows.push(['PRODUÇÕES POR PESSOA']);
+  rows.push(['Colaborador', 'Total', 'Concluídas', 'Taxa (%)', 'Horas']);
+  Object.entries(pessoas).sort((a,b)=>b[1].total-a[1].total).forEach(([nome, p]) => {
+    rows.push([nome, p.total, p.conc, p.total>0?Number(((p.conc/p.total)*100).toFixed(0)):0, Number(p.horas.toFixed(1))]);
+  });
+
+  return XLSX.utils.aoa_to_sheet(rows);
+}
+
+function exportarRelatorioExcel() {
+  if (!rawTaskRows || rawTaskRows.length === 0) {
+    alert('Sem dados para exportar.');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+
+  // Aba do período atualmente selecionado
+  const tipo = document.getElementById('relTipoPeriodo').value;
+  const periodo = document.getElementById('relPeriodo').value;
+
+  // Aba 1: recorte atual
+  if (tipo === 'semestral') {
+    XLSX.utils.book_append_sheet(wb, montarAbaExcel('semestral', periodo), 'Semestral');
+  } else if (tipo === 'anual') {
+    XLSX.utils.book_append_sheet(wb, montarAbaExcel('anual', periodo), 'Anual');
+  }
+
+  // Sempre inclui aba Total
+  XLSX.utils.book_append_sheet(wb, montarAbaExcel('total', null), 'Total');
+
+  // Se semestral, adiciona também o ano correspondente
+  if (tipo === 'semestral') {
+    const ano = periodo.split('-S')[0];
+    XLSX.utils.book_append_sheet(wb, montarAbaExcel('anual', ano), 'Anual ' + ano);
+  }
+
+  const nomeArq = `Relatorio_Gerencial_${labelPeriodoAtual().replace(/[^\w]/g,'_')}.xlsx`;
+  XLSX.writeFile(wb, nomeArq);
+}
 </script>
 </body>
 </html>
