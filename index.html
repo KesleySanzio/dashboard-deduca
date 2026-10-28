@@ -1326,6 +1326,30 @@ function navigateTo(page, el) {
 const API_URL = "https://script.google.com/macros/s/AKfycbxg93ZrXU8uM9FBVxrsugRa8BmKV99fuxpq4YwgAj7clKya0O5Gzm5AXIFqXULSJVPF/exec";
 const API_TOKEN = "deduca-dashboard-2026";
 
+// ▼▼▼ PESSOAS REMOVIDAS DA EQUIPE ▼▼▼
+// Nomes aqui somem de TODO o dashboard (KPIs, tabelas, gráficos, ranking, relatório).
+// Para remover alguém: adicione o nome completo entre aspas, separado por vírgula.
+// Para trazer de volta: apague a linha do nome. Depois suba o arquivo no GitHub.
+// A comparação ignora maiúsculas/minúsculas e espaços extras.
+const PESSOAS_REMOVIDAS = [
+  "Samuel Bertoldo Santiago",
+  "Felipe Menezes Rezende",
+  "Carolina Novaes",
+  "Jonathan Drumond",
+];
+// ▲▲▲ PESSOAS REMOVIDAS DA EQUIPE ▲▲▲
+
+// Normaliza nome para comparação (minúsculas, sem espaços extras/acento duplicado)
+function _normNome(n) {
+  return (n || '').toString().trim().toLowerCase().replace(/\s+/g, ' ');
+}
+const _removidasSet = new Set(PESSOAS_REMOVIDAS.map(_normNome));
+
+// true se a pessoa foi removida da equipe
+function pessoaRemovida(nome) {
+  return _removidasSet.has(_normNome(nome));
+}
+
 function scheduleNextRefresh() {
   // Recarrega os dados do dashboard a cada 30 minutos
   const REFRESH_MS = 30 * 60 * 1000; // 30 minutos
@@ -1399,6 +1423,8 @@ function setLastUpdated(dateStr) {
 
 // ===================== DATA PROCESSING =====================
 function processRows(rows) {
+  // Remove pessoas que não fazem mais parte da equipe (afeta todo o dashboard)
+  rows = rows.filter(r => !pessoaRemovida(r['Responsavel']));
   rawTaskRows = rows; // salva todas as linhas para as sub-abas
   const peopleMap = {};
   const projectMap = {};
@@ -2105,7 +2131,7 @@ function renderCsc(d) {
   });
 
   // Ranking atendimento
-  const ranking = [...(d.rankingAtendimento || [])].sort((a,b) => b.quantidade - a.quantidade);
+  const ranking = [...(d.rankingAtendimento || [])].filter(r => !pessoaRemovida(r.nome)).sort((a,b) => b.quantidade - a.quantidade);
   const ranks = ['gold','silver','bronze'];
   document.getElementById('cscRanking').innerHTML = ranking.map((r, i) => `
     <div class="rank-item">
