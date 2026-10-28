@@ -617,6 +617,8 @@
 
   .task-tag-proj { background: rgba(79,142,247,0.1); color: var(--accent); }
   .task-tag-dept { background: rgba(124,58,237,0.1); color: var(--accent2); }
+  .task-tag-disc { background: rgba(6,182,212,0.1); color: #06b6d4; }
+  .task-tag-tipo { background: rgba(148,163,184,0.12); color: #94a3b8; border: 1px solid rgba(148,163,184,0.2); }
   .task-tag-person { background: rgba(34,197,94,0.1); color: var(--green); }
   .task-tag-date { background: rgba(245,158,11,0.1); color: var(--yellow); }
 
@@ -1518,6 +1520,14 @@ function tempoTag(dias, prefixo) {
   return { texto: prefixo + label, cor, bg };
 }
 
+// Classifica o tipo de tarefa que se distingue das demais (sem juízo de valor)
+function tipoTarefa(titulo) {
+  const t = (titulo || '').toLowerCase();
+  if (t.includes('videoaula')) return 'Videoaula';
+  if (t.includes('revisão final') || t.includes('revisao final')) return 'Revisão final';
+  return null; // demais tarefas: sem tag de tipo
+}
+
 function renderEmAberto() {
   const projFilter = document.getElementById('filterAbertoProjeto')?.value || '';
   const deptFilter = document.getElementById('filterAbertoDept')?.value  || '';
@@ -1530,13 +1540,13 @@ function renderEmAberto() {
     }
     if (status !== 'Em Aberto') return false;
     if (projFilter && (r['Projeto'] || '') !== projFilter) return false;
-    if (deptFilter && (r['Setor Responsavel'] || '') !== deptFilter) return false;
+    if (deptFilter && (r['Disciplina'] || '') !== deptFilter) return false;
     return true;
   });
 
   // Populate filters
   populateTaskFilter('filterAbertoProjeto', rawTaskRows.filter(r => r['Status'] === 'Em Aberto').map(r => r['Projeto']), 'Todos os projetos');
-  populateTaskFilter('filterAbertoDept',    rawTaskRows.filter(r => r['Status'] === 'Em Aberto').map(r => r['Setor Responsavel']), 'Todos os departamentos');
+  populateTaskFilter('filterAbertoDept',    rawTaskRows.filter(r => r['Status'] === 'Em Aberto').map(r => r['Disciplina']), 'Todos os departamentos');
   if (projFilter) document.getElementById('filterAbertoProjeto').value = projFilter;
   if (deptFilter) document.getElementById('filterAbertoDept').value    = deptFilter;
 
@@ -1556,7 +1566,8 @@ function renderEmAberto() {
         <div class="task-title">${r['Titulo da tarefa'] || r['Título da tarefa'] || r['Title'] || 'Sem título'}</div>
         <div class="task-meta">
           <span class="task-tag task-tag-proj">📁 ${r['Projeto'] || 'Sem projeto'}</span>
-          <span class="task-tag task-tag-dept">🏢 ${r['Setor Responsavel'] || '—'}</span>
+          <span class="task-tag task-tag-disc">🏢 ${r['Disciplina'] || '—'}</span>
+          ${(() => { const tp = tipoTarefa(r['Titulo da tarefa']||''); return tp ? `<span class="task-tag task-tag-tipo">🏷 ${tp}</span>` : ''; })()}
           ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏳ Aberta '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto}</span>`; })()}
           ${hasLinks ? '<span class="task-tag" style="background:rgba(79,142,247,0.1);color:var(--accent)">🔗 Links</span>' : ''}
         </div>
@@ -1574,13 +1585,13 @@ function renderEmAndamento() {
   const tasks = rawTaskRows.filter(r => {
     if ((r['Status'] || '') !== 'Em Andamento') return false;
     if (projFilter && (r['Projeto'] || '') !== projFilter) return false;
-    if (deptFilter && (r['Setor Responsavel'] || '') !== deptFilter) return false;
+    if (deptFilter && (r['Disciplina'] || '') !== deptFilter) return false;
     return true;
   });
 
   // Populate filters
   populateTaskFilter('filterAndamentoProjeto', rawTaskRows.filter(r => r['Status'] === 'Em Andamento').map(r => r['Projeto']), 'Todos os projetos');
-  populateTaskFilter('filterAndamentoDept',    rawTaskRows.filter(r => r['Status'] === 'Em Andamento').map(r => r['Setor Responsavel']), 'Todos os departamentos');
+  populateTaskFilter('filterAndamentoDept',    rawTaskRows.filter(r => r['Status'] === 'Em Andamento').map(r => r['Disciplina']), 'Todos os departamentos');
   if (projFilter) document.getElementById('filterAndamentoProjeto').value = projFilter;
   if (deptFilter) document.getElementById('filterAndamentoDept').value    = deptFilter;
 
@@ -1600,7 +1611,8 @@ function renderEmAndamento() {
         <div class="task-title">${r['Titulo da tarefa'] || r['Título da tarefa'] || r['Title'] || 'Sem título'}</div>
         <div class="task-meta">
           <span class="task-tag task-tag-proj">📁 ${r['Projeto'] || 'Sem projeto'}</span>
-          <span class="task-tag task-tag-dept">🏢 ${r['Setor Responsavel'] || '—'}</span>
+          <span class="task-tag task-tag-disc">🏢 ${r['Disciplina'] || '—'}</span>
+          ${(() => { const tp = tipoTarefa(r['Titulo da tarefa']||''); return tp ? `<span class="task-tag task-tag-tipo">🏷 ${tp}</span>` : ''; })()}
           <span class="task-tag task-tag-person">👤 ${r['Responsavel'] || '—'}</span>
           <span class="task-tag task-tag-date">📅 Assumida em: ${formatDate(r['Inicio'] || '')}</span>
           ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏱ '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto} com a tarefa</span>`; })()}
