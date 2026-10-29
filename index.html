@@ -1816,6 +1816,9 @@ function renderAll() {
   renderRanking();
   renderProjects();
   buildCharts();
+  // Re-renderiza a sub-aba de tarefas que estiver ativa (preenche ao chegar os dados)
+  if (document.querySelector('#subpanel-em-aberto.active'))    renderEmAberto();
+  if (document.querySelector('#subpanel-em-andamento.active')) renderEmAndamento();
   document.getElementById('apiStatus').textContent = '● Conectado à planilha';
   document.getElementById('apiStatus').style.color = '#22c55e';
 }
