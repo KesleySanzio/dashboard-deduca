@@ -618,6 +618,14 @@
   .task-tag-proj { background: rgba(79,142,247,0.1); color: var(--accent); }
   .task-tag-dept { background: rgba(124,58,237,0.1); color: var(--accent2); }
   .task-tag-disc { background: rgba(6,182,212,0.1); color: #06b6d4; }
+  .task-tag-pub { background: rgba(236,72,153,0.12); color: #ec4899; }
+
+  /* Perfis de acesso: por padrão (equipe) os blocos restritos ficam ocultos */
+  .restrito-gestao { display: none !important; }
+  body.perfil-gestao .nav-item.restrito-gestao { display: flex !important; }
+  body.perfil-gestao .grid-2.restrito-gestao { display: grid !important; }
+  body.perfil-gestao .card.restrito-gestao { display: block !important; }
+  body.perfil-gestao .section-title.restrito-gestao { display: flex !important; }
   .task-tag-person { background: rgba(34,197,94,0.1); color: var(--green); }
   .task-tag-date { background: rgba(245,158,11,0.1); color: var(--yellow); }
 
@@ -864,7 +872,7 @@
       <span class="nav-label">Produtividade</span>
     </div>
 
-    <div class="nav-item" data-page="relatorio" data-label="Relatório Gerencial" onclick="navigateTo('relatorio', this)">
+    <div class="nav-item restrito-gestao" data-page="relatorio" data-label="Relatório Gerencial" onclick="navigateTo('relatorio', this)">
       <span class="nav-icon">📈</span>
       <span class="nav-label">Relatório Gerencial</span>
     </div>
@@ -875,7 +883,7 @@
       <span class="nav-badge">Em breve</span>
     </div>
 
-    <div class="nav-item" data-page="csc" data-label="CSC · Chamados" onclick="navigateTo('csc', this)">
+    <div class="nav-item restrito-gestao" data-page="csc" data-label="CSC · Chamados" onclick="navigateTo('csc', this)">
       <span class="nav-icon">🎫</span>
       <span class="nav-label">CSC · Chamados</span>
     </div>
@@ -887,8 +895,20 @@
     </div>
   </nav>
 
-  <div class="sidebar-footer">
-    CEAD / Gestão do AVA · 2026
+  <div class="sidebar-footer" style="display:flex;flex-direction:column;gap:8px">
+    <button id="btnPerfil" onclick="alternarPerfil()" style="
+      background:rgba(79,142,247,0.1);
+      border:1px solid rgba(79,142,247,0.3);
+      border-radius:6px;
+      color:var(--accent);
+      font-size:11px;
+      font-family:'DM Sans',sans-serif;
+      padding:6px 10px;
+      cursor:pointer;
+      transition:all 0.2s;
+      white-space:nowrap;
+    " title="Alternar perfil de acesso">🔑 <span class="perfil-label">Entrar como Gestão</span></button>
+    <span style="font-size:10px;color:var(--text-dim)" class="perfil-label-footer">CEAD / Gestão do AVA · 2026</span>
   </div>
 </aside>
 
@@ -950,9 +970,9 @@
       <!-- SUB-PANEL: VISÃO GERAL -->
       <div class="sub-panel active" id="subpanel-visao-geral">
 
-      <div class="section-title">Produtividade por Pessoa</div>
+      <div class="section-title restrito-gestao">Produtividade por Pessoa</div>
 
-      <div class="grid-2">
+      <div class="grid-2 restrito-gestao">
         <div class="card col-span-2" style="animation-delay:0.25s">
           <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
             <span>Membros da Equipe <span style="color:var(--text-dim);font-size:10px;font-weight:400">· ordenar por coluna</span></span>
@@ -993,7 +1013,7 @@
         </div>
       </div>
 
-      <div class="grid-2">
+      <div class="grid-2 restrito-gestao">
         <div class="card" style="animation-delay:0.3s">
           <div class="card-title">Tarefas por Colaborador</div>
           <div class="chart-wrap" style="height:240px">
@@ -1008,7 +1028,7 @@
         </div>
       </div>
 
-      <div class="grid-2">
+      <div class="grid-2 restrito-gestao">
         <div class="card" style="animation-delay:0.4s">
           <div class="card-title">Ranking · Horas Apontadas</div>
           <div class="rank-list" id="rankHoras"></div>
@@ -1019,9 +1039,9 @@
         </div>
       </div>
 
-      <div class="section-title">Evolução Mensal</div>
+      <div class="section-title restrito-gestao">Evolução Mensal</div>
 
-      <div class="card" style="animation-delay:0.5s">
+      <div class="card restrito-gestao" style="animation-delay:0.5s">
         <div class="card-title">Tarefas Concluídas por Mês <span>· 8 principais colaboradores</span></div>
         <div class="chart-wrap" style="height:300px">
           <canvas id="chartMonthly"></canvas>
@@ -1326,6 +1346,52 @@ function navigateTo(page, el) {
 const API_URL = "https://script.google.com/macros/s/AKfycbxg93ZrXU8uM9FBVxrsugRa8BmKV99fuxpq4YwgAj7clKya0O5Gzm5AXIFqXULSJVPF/exec";
 const API_TOKEN = "deduca-dashboard-2026";
 
+// ===================== PERFIS DE ACESSO =====================
+// Senha para entrar no perfil de GESTÃO (acesso total). Troque aqui quando quiser.
+// Atenção: por ser site estático e público, isto é uma divisória de conveniência,
+// não uma barreira de segurança real — não protege dados verdadeiramente sigilosos.
+const SENHA_GESTAO = "@Pucminas2026";
+
+function aplicarPerfil(perfil) {
+  const ehGestao = perfil === 'gestao';
+  document.body.classList.toggle('perfil-gestao', ehGestao);
+  try { localStorage.setItem('deduca_perfil', perfil); } catch(e) {}
+  // Atualiza rótulo do botão
+  document.querySelectorAll('.perfil-label').forEach(el => {
+    el.textContent = ehGestao ? 'Sair da Gestão' : 'Entrar como Gestão';
+  });
+  // Se estava numa aba restrita e perdeu acesso, volta para Produtividade
+  if (!ehGestao) {
+    const ativa = document.querySelector('.page.active');
+    if (ativa && (ativa.id === 'page-relatorio' || ativa.id === 'page-csc')) {
+      const btnProd = document.querySelector('.nav-item[data-page="produtividade"]');
+      if (btnProd) navigateTo('produtividade', btnProd);
+    }
+  }
+}
+
+function alternarPerfil() {
+  const atual = document.body.classList.contains('perfil-gestao') ? 'gestao' : 'equipe';
+  if (atual === 'gestao') {
+    aplicarPerfil('equipe'); // sair não pede senha
+    return;
+  }
+  const s = prompt('Digite a senha de Gestão:');
+  if (s === null) return; // cancelou
+  if (s === SENHA_GESTAO) {
+    aplicarPerfil('gestao');
+  } else {
+    alert('Senha incorreta.');
+  }
+}
+
+// Restaura perfil salvo ao abrir (padrão: equipe)
+try {
+  if (localStorage.getItem('deduca_perfil') === 'gestao') {
+    document.addEventListener('DOMContentLoaded', () => aplicarPerfil('gestao'));
+  }
+} catch(e) {}
+
 // ▼▼▼ PESSOAS REMOVIDAS DA EQUIPE ▼▼▼
 // Nomes aqui somem de TODO o dashboard (KPIs, tabelas, gráficos, ranking, relatório).
 // Para remover alguém: adicione o nome completo entre aspas, separado por vírgula.
@@ -1545,6 +1611,14 @@ function tempoTag(dias, prefixo) {
   return { texto: prefixo + label, cor, bg };
 }
 
+// Extrai a data de publicação (dd/mm/aaaa) da coluna Entrega — só Pós-graduação
+function dataPublicacao(row) {
+  const proj = (row['Projeto'] || '').toLowerCase();
+  if (!proj.includes('pós-graduação') && !proj.includes('pos-graduacao') && !proj.includes('pós-graduacao')) return null;
+  const m = (row['Entrega'] || '').match(/(\d{2}\/\d{2}\/\d{4})/);
+  return m ? m[1] : null;
+}
+
 function renderEmAberto() {
   const projFilter = document.getElementById('filterAbertoProjeto')?.value || '';
   const deptFilter = document.getElementById('filterAbertoDept')?.value  || '';
@@ -1584,6 +1658,7 @@ function renderEmAberto() {
         <div class="task-meta">
           <span class="task-tag task-tag-proj">📁 ${r['Projeto'] || 'Sem projeto'}</span>
           <span class="task-tag task-tag-disc">🏢 ${r['Disciplina'] || '—'}</span>
+          ${(() => { const dp = dataPublicacao(r); return dp ? `<span class="task-tag task-tag-pub">📆 Publicação: ${dp}</span>` : ''; })()}
           ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏳ Aberta '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto}</span>`; })()}
           ${hasLinks ? '<span class="task-tag" style="background:rgba(79,142,247,0.1);color:var(--accent)">🔗 Links</span>' : ''}
         </div>
@@ -1628,6 +1703,7 @@ function renderEmAndamento() {
         <div class="task-meta">
           <span class="task-tag task-tag-proj">📁 ${r['Projeto'] || 'Sem projeto'}</span>
           <span class="task-tag task-tag-disc">🏢 ${r['Disciplina'] || '—'}</span>
+          ${(() => { const dp = dataPublicacao(r); return dp ? `<span class="task-tag task-tag-pub">📆 Publicação: ${dp}</span>` : ''; })()}
           <span class="task-tag task-tag-person">👤 ${r['Responsavel'] || '—'}</span>
           <span class="task-tag task-tag-date">📅 Assumida em: ${formatDate(r['Inicio'] || '')}</span>
           ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏱ '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto} com a tarefa</span>`; })()}
