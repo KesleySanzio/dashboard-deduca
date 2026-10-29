@@ -626,6 +626,7 @@
   body.perfil-gestao .grid-2.restrito-gestao { display: grid !important; }
   body.perfil-gestao .card.restrito-gestao { display: block !important; }
   body.perfil-gestao .section-title.restrito-gestao { display: flex !important; }
+  body.perfil-gestao .sub-tab.restrito-gestao { display: inline-block !important; }
   .task-tag-person { background: rgba(34,197,94,0.1); color: var(--green); }
   .task-tag-date { background: rgba(245,158,11,0.1); color: var(--yellow); }
 
@@ -962,7 +963,7 @@
       </div>
 
       <div class="sub-tabs">
-        <button class="sub-tab active" onclick="switchSubTab('visao-geral', this)">📊 Visão Geral</button>
+        <button class="sub-tab active restrito-gestao" onclick="switchSubTab('visao-geral', this)">📊 Visão Geral</button>
         <button class="sub-tab" onclick="switchSubTab('em-aberto', this)">○ Em Aberto</button>
         <button class="sub-tab" onclick="switchSubTab('em-andamento', this)">⟳ Em Andamento</button>
       </div>
@@ -1368,6 +1369,17 @@ function aplicarPerfil(perfil) {
       if (btnProd) navigateTo('produtividade', btnProd);
     }
   }
+  // Ajusta a sub-aba padrão da Produtividade conforme o perfil
+  ajustarSubAbaPadrao(ehGestao);
+}
+
+// Equipe não tem "Visão Geral": abre em "Em Aberto". Gestão abre em "Visão Geral".
+function ajustarSubAbaPadrao(ehGestao) {
+  const geralAtiva = document.querySelector('#subpanel-visao-geral.active');
+  if (!ehGestao && geralAtiva) {
+    const btnAberto = [...document.querySelectorAll('.sub-tab')].find(b => b.textContent.includes('Em Aberto'));
+    if (btnAberto) switchSubTab('em-aberto', btnAberto);
+  }
 }
 
 function alternarPerfil() {
@@ -1386,11 +1398,11 @@ function alternarPerfil() {
 }
 
 // Restaura perfil salvo ao abrir (padrão: equipe)
-try {
-  if (localStorage.getItem('deduca_perfil') === 'gestao') {
-    document.addEventListener('DOMContentLoaded', () => aplicarPerfil('gestao'));
-  }
-} catch(e) {}
+document.addEventListener('DOMContentLoaded', () => {
+  let perfil = 'equipe';
+  try { if (localStorage.getItem('deduca_perfil') === 'gestao') perfil = 'gestao'; } catch(e) {}
+  aplicarPerfil(perfil);
+});
 
 // ▼▼▼ PESSOAS REMOVIDAS DA EQUIPE ▼▼▼
 // Nomes aqui somem de TODO o dashboard (KPIs, tabelas, gráficos, ranking, relatório).
