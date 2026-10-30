@@ -1434,6 +1434,23 @@ function pessoaRemovida(nome) {
   return _removidasSet.has(_normNome(nome));
 }
 
+// ▼▼▼ TAREFAS OCULTAS ▼▼▼
+// IDs de tarefas que NÃO devem aparecer no dashboard (ex.: tarefas de teste
+// ou canceladas no Deduca que ainda vêm pela API). Some de todo o dashboard.
+// Para ocultar: adicione o "Id da tarefa" (número) separado por vírgula.
+// Para trazer de volta: apague o número. Depois suba o arquivo no GitHub.
+const TAREFAS_OCULTAS = [
+  92534, // 4.6 Inserção do material dos tópicos (UDA's 2027/2 - Psicologia, cancelada)
+  92514, // 5.6 Inserção das videoaulas nas páginas (UDA's 2027/2 - Psicologia, cancelada)
+  92519, // 7.5 Inserir a questão de fixação no H5P (UDA's 2027/2 - Psicologia, cancelada)
+];
+// ▲▲▲ TAREFAS OCULTAS ▲▲▲
+const _ocultasSet = new Set(TAREFAS_OCULTAS.map(x => String(x).trim()));
+
+function tarefaOculta(id) {
+  return _ocultasSet.has(String(id == null ? '' : id).trim());
+}
+
 function scheduleNextRefresh() {
   // Recarrega os dados do dashboard a cada 30 minutos
   const REFRESH_MS = 30 * 60 * 1000; // 30 minutos
@@ -1509,6 +1526,8 @@ function setLastUpdated(dateStr) {
 function processRows(rows) {
   // Remove pessoas que não fazem mais parte da equipe (afeta todo o dashboard)
   rows = rows.filter(r => !pessoaRemovida(r['Responsavel']));
+  // Remove tarefas ocultas (teste/canceladas que ainda vêm pela API)
+  rows = rows.filter(r => !tarefaOculta(r['Id da tarefa']));
   rawTaskRows = rows; // salva todas as linhas para as sub-abas
   const peopleMap = {};
   const projectMap = {};
