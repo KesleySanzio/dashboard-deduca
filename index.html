@@ -630,6 +630,82 @@
   .task-tag-person { background: rgba(34,197,94,0.1); color: var(--green); }
   .task-tag-date { background: rgba(245,158,11,0.1); color: var(--yellow); }
 
+  /* Pendências (Em Andamento) */
+  .task-item.pendente { border-left: 3px solid var(--yellow); background: linear-gradient(90deg, rgba(245,158,11,0.06), var(--surface2) 40%); }
+  .task-tag-pend { background: rgba(245,158,11,0.16); color: var(--yellow); font-weight: 600; }
+  .task-side { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .pend-btn {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 6px;
+    color: var(--yellow);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .pend-btn:hover { background: rgba(245,158,11,0.18); border-color: var(--yellow); }
+  .pend-btn.ver { background: rgba(245,158,11,0.18); }
+  .pend-aviso {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: rgba(124,58,237,0.08);
+    border: 1px dashed rgba(124,58,237,0.35);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-bottom: 12px;
+  }
+  .pend-form { display: flex; flex-direction: column; gap: 12px; }
+  .pend-form label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; display: flex; flex-direction: column; gap: 6px; }
+  .pend-form .task-select, .pend-form textarea { width: 100%; min-width: 0; }
+  .pend-form textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    resize: vertical;
+    min-height: 72px;
+    outline: none;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .pend-form textarea:focus { border-color: var(--accent); }
+  .pend-salvar {
+    background: rgba(245,158,11,0.15);
+    border: 1px solid rgba(245,158,11,0.45);
+    border-radius: 8px;
+    color: var(--yellow);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .pend-salvar:hover { background: rgba(245,158,11,0.25); }
+  .pend-salvar.resolver { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.4); color: var(--green); }
+  .pend-salvar.resolver:hover { background: rgba(34,197,94,0.22); }
+  .pend-salvar:disabled { opacity: 0.6; cursor: wait; }
+  .pend-info { background: rgba(245,158,11,0.07); border: 1px solid rgba(245,158,11,0.25); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .pend-info-motivo { font-weight: 600; color: var(--yellow); font-size: 14px; }
+  .pend-info-detalhe { font-size: 13px; color: var(--text); white-space: pre-wrap; line-height: 1.5; }
+  .pend-info-meta { font-size: 11px; color: var(--text-muted); }
+  .pend-erro { font-size: 12px; color: var(--red); min-height: 0; }
+  .pend-hist { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .pend-hist-titulo { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+  .pend-hist-item { font-size: 12px; color: var(--text-muted); padding: 6px 0; border-bottom: 1px solid rgba(31,39,64,0.5); line-height: 1.5; }
+  .pend-hist-item:last-child { border-bottom: none; }
+  @media (max-width: 600px) {
+    .task-item { grid-template-columns: 1fr; }
+    .task-side { justify-content: space-between; }
+  }
+
   .task-filters {
     display: flex;
     gap: 8px;
@@ -948,7 +1024,7 @@
         <div class="kpi-card yellow">
           <div class="kpi-label">Em Andamento</div>
           <div class="kpi-value num" id="kpi-and">—</div>
-          <div class="kpi-sub">tarefas ativas</div>
+          <div class="kpi-sub" id="kpi-and-sub">tarefas ativas</div>
         </div>
         <div class="kpi-card red" onclick="switchSubTabFromKpi('em-aberto')" style="cursor:pointer" title="Ver tarefas em aberto">
           <div class="kpi-label">Em Aberto</div>
@@ -1078,8 +1154,14 @@
           <select class="task-select" id="filterAndamentoDept" onchange="renderEmAndamento()">
             <option value="">Todos os departamentos</option>
           </select>
+          <select class="task-select" id="filterAndamentoPend" onchange="renderEmAndamento()">
+            <option value="">Com e sem pendência</option>
+            <option value="com">⚠ Só com pendência</option>
+            <option value="sem">Sem pendência</option>
+          </select>
           <span class="task-count" id="countAndamento"></span>
         </div>
+        <div class="pend-aviso" id="pendAvisoTeste" style="display:none">🧪 Modo de teste: as pendências ficam salvas só neste navegador, até o servidor (Apps Script) ser configurado.</div>
         <div class="task-list" id="listEmAndamento"></div>
       </div>
 
@@ -1718,11 +1800,14 @@ function renderEmAberto() {
 function renderEmAndamento() {
   const projFilter = document.getElementById('filterAndamentoProjeto')?.value || '';
   const deptFilter = document.getElementById('filterAndamentoDept')?.value   || '';
+  const pendFilter = document.getElementById('filterAndamentoPend')?.value   || '';
 
   const tasks = rawTaskRows.filter(r => {
     if ((r['Status'] || '') !== 'Em Andamento') return false;
     if (projFilter && (r['Projeto'] || '') !== projFilter) return false;
     if (deptFilter && (r['Disciplina'] || '') !== deptFilter) return false;
+    if (pendFilter === 'com' && !pendenciaAberta(r['Id da tarefa'])) return false;
+    if (pendFilter === 'sem' &&  pendenciaAberta(r['Id da tarefa'])) return false;
     return true;
   });
 
@@ -1732,7 +1817,10 @@ function renderEmAndamento() {
   if (projFilter) document.getElementById('filterAndamentoProjeto').value = projFilter;
   if (deptFilter) document.getElementById('filterAndamentoDept').value    = deptFilter;
 
-  document.getElementById('countAndamento').textContent = `${tasks.length} tarefa${tasks.length !== 1 ? 's' : ''}`;
+  const nPend = tasks.filter(r => pendenciaAberta(r['Id da tarefa'])).length;
+  document.getElementById('countAndamento').textContent = `${tasks.length} tarefa${tasks.length !== 1 ? 's' : ''}`
+    + (pendenciasErro ? ' · ⚠ pendências indisponíveis' : nPend ? ` · ⚠ ${nPend} com pendência` : '');
+  document.getElementById('pendAvisoTeste').style.display = PENDENCIAS_API ? 'none' : 'block';
 
   const list = document.getElementById('listEmAndamento');
   if (tasks.length === 0) {
@@ -1742,8 +1830,13 @@ function renderEmAndamento() {
 
   list.innerHTML = tasks.map((r, i) => {
     const hasLinks = r['Link tarefa'] || r['Tela de Entrega'];
+    const idTarefa = esc(r['Id da tarefa']);
+    const pend = pendenciaAberta(r['Id da tarefa']);
+    const pendTag = pend
+      ? `<span class="task-tag task-tag-pend">⚠ Pendente · ${esc(pend.motivo)} · ${tempoTag(daysSince(pend.registradoEm), '').texto}</span>`
+      : '';
     return `
-    <div class="task-item" onclick="openTaskModal('andamento-${i}')" title="Clique para ver links">
+    <div class="task-item${pend ? ' pendente' : ''}" onclick="openTaskModal('andamento-${i}')" title="Clique para ver links">
       <div style="flex:1;min-width:0">
         <div class="task-title">${r['Titulo da tarefa'] || r['Título da tarefa'] || r['Title'] || 'Sem título'}</div>
         <div class="task-meta">
@@ -1755,9 +1848,13 @@ function renderEmAndamento() {
           <span class="task-tag task-tag-date">📅 Assumida em: ${formatDate(r['Inicio'] || '')}</span>
           ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏱ '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto} com a tarefa</span>`; })()}
           ${hasLinks ? '<span class="task-tag" style="background:rgba(79,142,247,0.1);color:var(--accent)">🔗 Links</span>' : ''}
+          ${pendTag}
         </div>
       </div>
-      <div style="color:var(--text-dim);font-size:16px;flex-shrink:0;align-self:center">›</div>
+      <div class="task-side">
+        ${idTarefa ? `<button class="pend-btn${pend ? ' ver' : ''}" onclick="event.stopPropagation(); abrirPendencia('${idTarefa}')">${pend ? '⚠ Ver pendência' : '⚠ Marcar pendência'}</button>` : ''}
+        <div style="color:var(--text-dim);font-size:16px">›</div>
+      </div>
     </div>
     <div id="andamento-${i}" data-link="${encodeURIComponent(r['Link tarefa']||'')}" data-entrega="${encodeURIComponent(r['Tela de Entrega']||'')}" data-title="${encodeURIComponent(r['Titulo da tarefa']||r['Título da tarefa']||r['Title']||'Sem título')}" style="display:none"></div>`;
   }).join('');
@@ -1826,6 +1923,216 @@ function closeOnEsc(e) {
   if (e.key === 'Escape') closeTaskModal();
 }
 
+// ===================== PENDÊNCIAS (Em Andamento) =====================
+// URL do Web App do Apps Script (ver apps-script/LEIA-ME.md).
+// Vazio = modo de teste: as pendências ficam só neste navegador, para validar a tela.
+const PENDENCIAS_API = "";
+
+// Mesma lista do apps-script/Pendencias.gs (MOTIVOS). Se mudar aqui, mude lá.
+const MOTIVOS_PENDENCIA = [
+  'Aguardando professor/conteudista',
+  'Aguardando outro setor',
+  'Problema técnico / sistema',
+  'Aguardando aprovação da gestão',
+  'Outro',
+];
+
+const CHAVE_PEND_TESTE = 'deduca_pendencias_teste';
+const CHAVE_MEU_NOME   = 'deduca_meu_nome';
+let pendencias = [];        // todos os registros (abertos e resolvidos)
+let pendenciasErro = false; // true se o servidor não respondeu
+
+// Escapa texto digitado pela equipe antes de ir para o HTML
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+async function chamarPendencias(corpo) {
+  if (!PENDENCIAS_API) return pendenciasTeste(corpo);
+  // Sem Content-Type JSON: text/plain evita a "pré-consulta" CORS, que o Apps Script não responde.
+  const resp = await fetch(PENDENCIAS_API, { method: 'POST', body: JSON.stringify(corpo) });
+  const r = await resp.json();
+  if (!r.ok) throw new Error(r.erro || 'Erro no servidor.');
+  return r.dados;
+}
+
+// Simula o Apps Script no localStorage (mesmas regras), para testar sem servidor
+function pendenciasTeste(p) {
+  let lista = [];
+  try { lista = JSON.parse(localStorage.getItem(CHAVE_PEND_TESTE) || '[]'); } catch(e) {}
+  const salvar = () => { try { localStorage.setItem(CHAVE_PEND_TESTE, JSON.stringify(lista)); } catch(e) {} };
+  if (p.acao === 'listar') return lista;
+  if (p.acao === 'registrar') {
+    if (lista.some(r => r.idTarefa === p.idTarefa && r.status === 'aberta'))
+      throw new Error('Esta tarefa já tem uma pendência aberta. Resolva-a antes de registrar outra.');
+    const reg = {
+      id: 'teste-' + Date.now(), idTarefa: p.idTarefa, titulo: p.titulo, motivo: p.motivo, detalhe: p.detalhe,
+      registradoPor: p.nome, registradoEm: new Date().toISOString(), status: 'aberta', resolvidoPor: '', resolvidoEm: '',
+    };
+    lista.push(reg); salvar();
+    return reg;
+  }
+  if (p.acao === 'resolver') {
+    const reg = lista.find(r => r.id === p.id);
+    if (!reg) throw new Error('Pendência não encontrada.');
+    if (reg.status !== 'aberta') throw new Error('Esta pendência já foi resolvida.');
+    Object.assign(reg, { status: 'resolvida', resolvidoPor: p.nome, resolvidoEm: new Date().toISOString() });
+    salvar();
+    return reg;
+  }
+  throw new Error('Ação desconhecida.');
+}
+
+async function carregarPendencias() {
+  try {
+    pendencias = await chamarPendencias({ acao: 'listar' });
+    pendenciasErro = false;
+  } catch(err) {
+    console.error('Erro ao carregar pendências:', err);
+    pendenciasErro = true;
+  }
+  atualizarPendenciasNaTela();
+}
+
+function atualizarPendenciasNaTela() {
+  const emAndamento = rawTaskRows.filter(r => r['Status'] === 'Em Andamento');
+  const n = emAndamento.filter(r => pendenciaAberta(r['Id da tarefa'])).length;
+  document.getElementById('kpi-and-sub').textContent = n ? `tarefas ativas · ⚠ ${n} com pendência` : 'tarefas ativas';
+  if (document.querySelector('#subpanel-em-andamento.active')) renderEmAndamento();
+}
+
+function pendenciaAberta(idTarefa) {
+  const id = String(idTarefa == null ? '' : idTarefa);
+  return pendencias.find(r => String(r.idTarefa) === id && r.status === 'aberta') || null;
+}
+
+function dataHora(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function opcoesNomes() {
+  let meu = '';
+  try { meu = localStorage.getItem(CHAVE_MEU_NOME) || ''; } catch(e) {}
+  const nomes = people.map(p => p.name).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  return '<option value="">Selecione seu nome…</option>'
+    + nomes.map(n => `<option value="${esc(n)}"${n === meu ? ' selected' : ''}>${esc(n)}</option>`).join('');
+}
+
+function abrirPendencia(idTarefa) {
+  const tarefa = rawTaskRows.find(r => String(r['Id da tarefa']) === String(idTarefa));
+  if (!tarefa) return;
+  closeTaskModal();
+  const titulo = tarefa['Titulo da tarefa'] || tarefa['Título da tarefa'] || 'Sem título';
+  const aberta = pendenciaAberta(idTarefa);
+  const historico = pendencias
+    .filter(r => String(r.idTarefa) === String(idTarefa) && r.status !== 'aberta')
+    .sort((a, b) => String(b.registradoEm).localeCompare(String(a.registradoEm)));
+
+  const corpo = aberta ? `
+    <div class="pend-info">
+      <div class="pend-info-motivo">⚠ ${esc(aberta.motivo)}</div>
+      ${aberta.detalhe ? `<div class="pend-info-detalhe">${esc(aberta.detalhe)}</div>` : ''}
+      <div class="pend-info-meta">Registrada por ${esc(aberta.registradoPor)} em ${dataHora(aberta.registradoEm)} · ${tempoTag(daysSince(aberta.registradoEm), '').texto}</div>
+    </div>
+    <div class="pend-form" style="margin-top:16px">
+      <label>Quem está resolvendo
+        <select class="task-select" id="pendNome">${opcoesNomes()}</select>
+      </label>
+      <div class="pend-erro" id="pendErro"></div>
+      <button class="pend-salvar resolver" id="pendBotao" onclick="resolverPendencia('${esc(aberta.id)}')">✓ Pendência resolvida</button>
+    </div>` : `
+    <div class="pend-form">
+      <label>Motivo
+        <select class="task-select" id="pendMotivo">
+          <option value="">Selecione o motivo…</option>
+          ${MOTIVOS_PENDENCIA.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}
+        </select>
+      </label>
+      <label>Detalhes <span style="text-transform:none;letter-spacing:0;color:var(--text-dim)">(obrigatório para "Outro")</span>
+        <textarea id="pendDetalhe" maxlength="500" placeholder="Ex.: aguardando o professor enviar o material da unidade 2"></textarea>
+      </label>
+      <label>Quem está registrando
+        <select class="task-select" id="pendNome">${opcoesNomes()}</select>
+      </label>
+      <div class="pend-erro" id="pendErro"></div>
+      <button class="pend-salvar" id="pendBotao" onclick="salvarPendencia('${esc(idTarefa)}')">Salvar pendência</button>
+    </div>`;
+
+  const hist = historico.length ? `
+    <div class="pend-hist">
+      <div class="pend-hist-titulo">Pendências anteriores</div>
+      ${historico.map(r => `
+        <div class="pend-hist-item">
+          <strong style="color:var(--text)">${esc(r.motivo)}</strong>${r.detalhe ? ' — ' + esc(r.detalhe) : ''}<br>
+          ${esc(r.registradoPor)}, ${dataHora(r.registradoEm)} · resolvida por ${esc(r.resolvidoPor)}, ${dataHora(r.resolvidoEm)}
+        </div>`).join('')}
+    </div>` : '';
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'taskModal';
+  modal.innerHTML = `
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeTaskModal()">✕</button>
+      <div class="modal-title">${esc(titulo)}</div>
+      <div class="modal-subtitle">${aberta ? 'Pendência aberta' : 'Registrar pendência'} · ${esc(tarefa['Responsavel'] || '—')}</div>
+      ${corpo}
+      ${hist}
+    </div>`;
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeTaskModal(); });
+  document.body.appendChild(modal);
+  document.addEventListener('keydown', closeOnEsc);
+}
+
+function lerNomePendencia() {
+  const nome = document.getElementById('pendNome').value;
+  if (nome) { try { localStorage.setItem(CHAVE_MEU_NOME, nome); } catch(e) {} }
+  return nome;
+}
+
+async function enviarPendencia(corpo, aoConcluir) {
+  const botao = document.getElementById('pendBotao');
+  const erro  = document.getElementById('pendErro');
+  const textoBotao = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = 'Salvando…';
+  erro.textContent = '';
+  try {
+    aoConcluir(await chamarPendencias(corpo));
+    closeTaskModal();
+    atualizarPendenciasNaTela();
+  } catch(err) {
+    erro.textContent = '⚠ ' + err.message;
+    botao.disabled = false;
+    botao.textContent = textoBotao;
+  }
+}
+
+function salvarPendencia(idTarefa) {
+  const motivo  = document.getElementById('pendMotivo').value;
+  const detalhe = document.getElementById('pendDetalhe').value.trim();
+  const nome    = lerNomePendencia();
+  const erro    = document.getElementById('pendErro');
+  if (!motivo) { erro.textContent = '⚠ Escolha o motivo.'; return; }
+  if (motivo === 'Outro' && !detalhe) { erro.textContent = '⚠ Para "Outro", descreva o motivo nos detalhes.'; return; }
+  if (!nome) { erro.textContent = '⚠ Selecione seu nome.'; return; }
+  const tarefa = rawTaskRows.find(r => String(r['Id da tarefa']) === String(idTarefa)) || {};
+  enviarPendencia(
+    { acao: 'registrar', idTarefa: String(idTarefa), titulo: tarefa['Titulo da tarefa'] || '', motivo, detalhe, nome },
+    reg => pendencias.push(reg)
+  );
+}
+
+function resolverPendencia(id) {
+  const nome = lerNomePendencia();
+  if (!nome) { document.getElementById('pendErro').textContent = '⚠ Selecione seu nome.'; return; }
+  enviarPendencia({ acao: 'resolver', id, nome }, reg => {
+    const i = pendencias.findIndex(r => r.id === reg.id);
+    if (i >= 0) pendencias[i] = reg; else pendencias.push(reg);
+  });
+}
+
 async function fetchData() {
   showLoading(true);
   try {
@@ -1836,6 +2143,7 @@ async function fetchData() {
     processRows(json.data);
     setLastUpdated(json.updated);
     renderAll();
+    carregarPendencias();
   } catch(err) {
     console.error('Erro ao buscar dados:', err);
     document.getElementById('apiStatus').textContent = '⚠ Erro ao carregar dados da planilha';
