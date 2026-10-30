@@ -1219,9 +1219,15 @@
         <select id="relTipoPeriodo" onchange="onRelTipoChange()" class="task-select" style="min-width:140px">
           <option value="semestral">Semestral</option>
           <option value="anual">Anual</option>
+          <option value="personalizado">Período personalizado</option>
           <option value="total">Total (geral)</option>
         </select>
         <select id="relPeriodo" onchange="renderRelatorio()" class="task-select" style="min-width:170px"></select>
+        <span id="relRangeWrap" style="display:none;align-items:center;gap:6px">
+          <input type="date" id="relDataIni" onchange="renderRelatorio()" class="task-select" style="min-width:140px" />
+          <span style="font-size:12px;color:var(--text-muted)">até</span>
+          <input type="date" id="relDataFim" onchange="renderRelatorio()" class="task-select" style="min-width:140px" />
+        </span>
         <button onclick="exportarRelatorioExcel()" style="
           margin-left:auto;
           background:rgba(34,197,94,0.12);
@@ -1631,6 +1637,14 @@ function dataPublicacao(row) {
   return m ? m[1] : null;
 }
 
+// Nome da disciplina (texto após a data) — só Pós-graduação
+function nomeDisciplinaPos(row) {
+  const proj = (row['Projeto'] || '').toLowerCase();
+  if (!proj.includes('pós-graduação') && !proj.includes('pos-graduacao') && !proj.includes('pós-graduacao')) return null;
+  const m = (row['Entrega'] || '').match(/\d{2}\/\d{2}\/\d{4}\s*\|?\s*(.+)$/);
+  return m && m[1].trim() ? m[1].trim() : null;
+}
+
 function renderEmAberto() {
   const projFilter = document.getElementById('filterAbertoProjeto')?.value || '';
   const deptFilter = document.getElementById('filterAbertoDept')?.value  || '';
@@ -1671,6 +1685,7 @@ function renderEmAberto() {
           <span class="task-tag task-tag-proj">📁 ${r['Projeto'] || 'Sem projeto'}</span>
           <span class="task-tag task-tag-disc">🏢 ${r['Disciplina'] || '—'}</span>
           ${(() => { const dp = dataPublicacao(r); return dp ? `<span class="task-tag task-tag-pub">📆 Publicação: ${dp}</span>` : ''; })()}
+          ${(() => { const nd = nomeDisciplinaPos(r); return nd ? `<span class="task-tag task-tag-disc">📘 ${nd}</span>` : ''; })()}
           ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏳ Aberta '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto}</span>`; })()}
           ${hasLinks ? '<span class="task-tag" style="background:rgba(79,142,247,0.1);color:var(--accent)">🔗 Links</span>' : ''}
         </div>
@@ -1716,6 +1731,7 @@ function renderEmAndamento() {
           <span class="task-tag task-tag-proj">📁 ${r['Projeto'] || 'Sem projeto'}</span>
           <span class="task-tag task-tag-disc">🏢 ${r['Disciplina'] || '—'}</span>
           ${(() => { const dp = dataPublicacao(r); return dp ? `<span class="task-tag task-tag-pub">📆 Publicação: ${dp}</span>` : ''; })()}
+          ${(() => { const nd = nomeDisciplinaPos(r); return nd ? `<span class="task-tag task-tag-disc">📘 ${nd}</span>` : ''; })()}
           <span class="task-tag task-tag-person">👤 ${r['Responsavel'] || '—'}</span>
           <span class="task-tag task-tag-date">📅 Assumida em: ${formatDate(r['Inicio'] || '')}</span>
           ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏱ '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto} com a tarefa</span>`; })()}
@@ -2277,6 +2293,16 @@ function getSemestreKey(dateStr) {
   } catch(e) { return null; }
 }
 
+// Converte 'Inicio' (ISO) para objeto Date (00:00) para comparação de intervalo
+function dataInicioObj(dateStr) {
+  if (!dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d)) return null;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  } catch(e) { return null; }
+}
+
 function getAnoKey(dateStr) {
   if (!dateStr) return null;
   try {
@@ -2305,9 +2331,33 @@ function initRelatorio() {
 function onRelTipoChange() {
   const tipo = document.getElementById('relTipoPeriodo').value;
   const sel = document.getElementById('relPeriodo');
+  const range = document.getElementById('relRangeWrap');
+
+  // mostra/esconde campos de data do período personalizado
+  range.style.display = (tipo === 'personalizado') ? 'inline-flex' : 'none';
 
   if (tipo === 'total') {
     sel.style.display = 'none';
+    renderRelatorio();
+    return;
+  }
+  if (tipo === 'personalizado') {
+    sel.style.display = 'none';
+    // Preenche as datas com o intervalo disponível, se ainda vazias
+    const dIni = document.getElementById('relDataIni');
+    const dFim = document.getElementById('relDataFim');
+    if (!dIni.value || !dFim.value) {
+      let min=null, max=null;
+      rawTaskRows.forEach(r => {
+        const d = dataInicioObj(r['Inicio']||'');
+        if (!d) return;
+        if (!min || d < min) min = d;
+        if (!max || d > max) max = d;
+      });
+      const iso = d => d ? d.toISOString().slice(0,10) : '';
+      if (!dIni.value) dIni.value = iso(min);
+      if (!dFim.value) dFim.value = iso(max);
+    }
     renderRelatorio();
     return;
   }
@@ -2329,16 +2379,28 @@ function onRelTipoChange() {
   renderRelatorio();
 }
 
+// Decide se uma linha entra no período selecionado
+function passaPeriodo(r, tipo, periodo) {
+  if (tipo === 'total') return true;
+  if (tipo === 'personalizado') {
+    const d = dataInicioObj(r['Inicio']||'');
+    if (!d) return false;
+    const iniV = document.getElementById('relDataIni').value;
+    const fimV = document.getElementById('relDataFim').value;
+    if (iniV) { const ini = new Date(iniV+'T00:00:00'); if (d < ini) return false; }
+    if (fimV) { const fim = new Date(fimV+'T00:00:00'); if (d > fim) return false; }
+    return true;
+  }
+  const k = tipo === 'semestral' ? getSemestreKey(r['Inicio']||'') : getAnoKey(r['Inicio']||'');
+  return k === periodo;
+}
+
 // Filtra linhas conforme período selecionado e agrega
 function agregarRelatorio() {
   const tipo = document.getElementById('relTipoPeriodo').value;
   const periodo = document.getElementById('relPeriodo').value;
 
-  const filtradas = rawTaskRows.filter(r => {
-    if (tipo === 'total') return true;
-    const k = tipo === 'semestral' ? getSemestreKey(r['Inicio']||'') : getAnoKey(r['Inicio']||'');
-    return k === periodo;
-  });
+  const filtradas = rawTaskRows.filter(r => passaPeriodo(r, tipo, periodo));
 
   const pessoas = {};
   const projetos = {};
@@ -2388,6 +2450,12 @@ function agregarRelatorio() {
 function labelPeriodoAtual() {
   const tipo = document.getElementById('relTipoPeriodo').value;
   if (tipo === 'total') return 'Todos os períodos';
+  if (tipo === 'personalizado') {
+    const iniV = document.getElementById('relDataIni').value;
+    const fimV = document.getElementById('relDataFim').value;
+    const br = s => s ? s.split('-').reverse().join('/') : '—';
+    return `${br(iniV)} a ${br(fimV)}`;
+  }
   const periodo = document.getElementById('relPeriodo').value;
   if (tipo === 'semestral') return labelSemestre(periodo);
   return `Ano ${periodo}`;
@@ -2437,12 +2505,8 @@ function renderRelatorio() {
 
 // ---- Exportação Excel (uma aba por recorte) ----
 function montarAbaExcel(tipo, periodo) {
-  // Filtra
-  const filtradas = rawTaskRows.filter(r => {
-    if (tipo === 'total') return true;
-    const k = tipo === 'semestral' ? getSemestreKey(r['Inicio']||'') : getAnoKey(r['Inicio']||'');
-    return k === periodo;
-  });
+  // Filtra (respeita também o período personalizado)
+  const filtradas = rawTaskRows.filter(r => passaPeriodo(r, tipo, periodo));
 
   const pessoas = {};
   let total = 0, conc = 0, and = 0, ab = 0, horas = 0;
@@ -2463,7 +2527,10 @@ function montarAbaExcel(tipo, periodo) {
   });
 
   const rows = [];
-  const rotulo = tipo === 'total' ? 'Total Geral' : (tipo === 'semestral' ? labelSemestre(periodo) : `Ano ${periodo}`);
+  const rotulo = tipo === 'total' ? 'Total Geral'
+    : tipo === 'personalizado' ? labelPeriodoAtual()
+    : tipo === 'semestral' ? labelSemestre(periodo)
+    : `Ano ${periodo}`;
   rows.push(['RELATÓRIO GERENCIAL — ' + rotulo]);
   rows.push([]);
   rows.push(['RESUMO']);
@@ -2499,6 +2566,8 @@ function exportarRelatorioExcel() {
     XLSX.utils.book_append_sheet(wb, montarAbaExcel('semestral', periodo), 'Semestral');
   } else if (tipo === 'anual') {
     XLSX.utils.book_append_sheet(wb, montarAbaExcel('anual', periodo), 'Anual');
+  } else if (tipo === 'personalizado') {
+    XLSX.utils.book_append_sheet(wb, montarAbaExcel('personalizado', null), 'Período');
   }
 
   // Sempre inclui aba Total
