@@ -1647,9 +1647,11 @@ function tarefaOculta(id) {
 }
 
 function scheduleNextRefresh() {
-  // Recarrega os dados do dashboard a cada 30 minutos
-  const REFRESH_MS = 30 * 60 * 1000; // 30 minutos
-  setInterval(fetchData, REFRESH_MS);
+  // A planilha é exportada para o dados.json a cada 30 min; conferir a cada 10 min
+  // deixa o painel no máximo ~15 min atrás (10 min + 5 min de cache do GitHub).
+  setInterval(() => fetchData(), 10 * 60 * 1000);
+  // A idade dos dados ("há 6 min") anda sozinha
+  setInterval(atualizarStatusDados, 60 * 1000);
 }
 
 // ===================== STATE =====================
@@ -1780,11 +1782,28 @@ function showLoading(on) {
   if (el) el.style.opacity = on ? '1' : '0';
 }
 
-function setLastUpdated(dateStr) {
+// ---------- frescor dos dados ----------
+// "updated" no dados.json = hora em que a planilha foi exportada (a cada 30 min, automático)
+const INTERVALO_EXPORTACAO_MIN = 30;
+let dadosDe = null;       // Date da exportação que está na tela
+let avisoDados = '';      // resultado do último "Atualizar agora"
+let avisoDadosAte = 0;    // até quando mostrar esse resultado
+
+const hhmm = d => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+function atualizarStatusDados() {
   const el = document.getElementById('lastUpdated');
-  if (!el) return;
-  const d = dateStr ? new Date(dateStr) : new Date();
-  el.textContent = 'Atualizado: ' + d.toLocaleString('pt-BR');
+  if (!dadosDe) return;
+  const min = Math.max(0, Math.round((Date.now() - dadosDe) / 60000));
+  const idade = min < 1 ? 'agora há pouco' : min < 60 ? `há ${min} min` : `há ${Math.floor(min / 60)} h ${min % 60} min`;
+  const atrasado = min > INTERVALO_EXPORTACAO_MIN * 2 + 10;
+  marcarStatus('apiStatus', `Dados de ${hhmm(dadosDe)} (${idade})${atrasado ? ' · exportação atrasada' : ''}`, atrasado ? 'alerta' : 'ok');
+  if (el) {
+    const proxima = new Date(dadosDe.getTime() + INTERVALO_EXPORTACAO_MIN * 60000);
+    el.textContent = Date.now() < avisoDadosAte ? avisoDados
+      : atrasado ? 'A planilha deveria ser exportada a cada 30 min. Se continuar assim, avise o Kesley.'
+      : `Próxima exportação da planilha por volta de ${hhmm(proxima)}`;
+  }
 }
 
 // ===================== DATA PROCESSING =====================
@@ -2952,20 +2971,43 @@ function resolverPendencia(id) {
   enviarPendencia({ acao: 'resolver', id }, 'Resolveu pendência', `#${p.idTarefa || ''} ${p.titulo || ''} · ${p.motivo || ''}`);
 }
 
-async function fetchData() {
+// Endereço normal (raw): o GitHub guarda em cache por 5 min, mesmo com ?t=.
+// Endereço da API: cache de 1 min, mas limitado a 60 consultas/hora por rede; usado só no clique.
+const DADOS_RAW = 'https://raw.githubusercontent.com/KesleySanzio/dashboard-deduca/main/dados.json';
+const DADOS_API = 'https://api.github.com/repos/KesleySanzio/dashboard-deduca/contents/dados.json?ref=main';
+
+async function baixarDados(fresco) {
+  if (fresco) {
+    try {
+      const res = await fetch(DADOS_API, { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' });
+      if (res.ok) return await res.json();
+      console.warn('API do GitHub respondeu ' + res.status + '; usando o endereço normal.');
+    } catch(e) { console.warn('API do GitHub indisponível; usando o endereço normal.', e); }
+  }
+  const res = await fetch(`${DADOS_RAW}?t=${Date.now()}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+// Devolve 'novos' quando chegou uma exportação mais nova, 'iguais' quando não, ou 'erro'
+async function fetchData(fresco = false) {
   showLoading(true);
   try {
-    const url = `https://raw.githubusercontent.com/KesleySanzio/dashboard-deduca/main/dados.json?t=${Date.now()}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    processRows(json.data);
-    setLastUpdated(json.updated);
-    renderAll();
+    const json = await baixarDados(fresco);
+    const nova = json.updated ? new Date(json.updated) : new Date();
+    const mudou = !dadosDe || nova.getTime() !== dadosDe.getTime();
+    dadosDe = nova;
+    if (mudou || !people.length) {
+      processRows(json.data);
+      renderAll();
+    }
     carregarPendencias();
+    atualizarStatusDados();
+    return mudou ? 'novos' : 'iguais';
   } catch(err) {
     console.error('Erro ao buscar dados:', err);
-    marcarStatus('apiStatus', 'Não foi possível carregar os dados. Tente "Atualizar".', 'erro');
+    marcarStatus('apiStatus', 'Sem conexão com os dados. Tente "Atualizar agora".', 'erro');
+    return 'erro';
   } finally {
     showLoading(false);
   }
@@ -2980,7 +3022,7 @@ function renderAll() {
   // Re-renderiza a sub-aba de tarefas que estiver ativa (preenche ao chegar os dados)
   if (document.querySelector('#subpanel-em-aberto.active'))    renderEmAberto();
   if (document.querySelector('#subpanel-em-andamento.active')) renderEmAndamento();
-  marcarStatus('apiStatus', 'Conectado à planilha', 'ok');
+  atualizarStatusDados();
 }
 
 // ===================== FILTER =====================
@@ -3250,22 +3292,28 @@ document.querySelector('header').insertAdjacentHTML('afterend', `
 
 document.querySelector('.logo-area p').insertAdjacentHTML('afterend', `
   <div class="linha-status">
-    <span id="apiStatus" class="ponto">Conectando à planilha…</span>
+    <span id="apiStatus" class="ponto">Carregando dados…</span>
     <span id="lastUpdated"></span>
     <button onclick="manualRefresh()" id="refreshBtn" class="btn-atualizar"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7L20 8M20 3v5h-5"/></svg>Atualizar agora</button>
   </div>
 `);
 
-function manualRefresh() {
+async function manualRefresh() {
   const btn = document.getElementById('refreshBtn');
   const rotulo = btn.innerHTML;
   btn.lastChild.textContent = 'Atualizando…';
   btn.disabled = true;
-  marcarStatus('apiStatus', 'Atualizando dados…', '');
-  fetchData().finally(() => {
-    btn.innerHTML = rotulo;
-    btn.disabled = false;
-  });
+  marcarStatus('apiStatus', 'Buscando dados novos…', '');
+  // Espera mínima para o clique ter retorno visível mesmo quando a resposta é instantânea
+  const [res] = await Promise.all([fetchData(true), new Promise(r => setTimeout(r, 700))]);
+  btn.innerHTML = rotulo;
+  btn.disabled = false;
+  if (res === 'erro') return;
+  avisoDados = res === 'novos'
+    ? `Dados novos carregados às ${hhmm(new Date())}.`
+    : `Conferido às ${hhmm(new Date())}: sem novidades. A planilha é exportada a cada 30 min, a próxima por volta de ${hhmm(new Date(dadosDe.getTime() + INTERVALO_EXPORTACAO_MIN * 60000))}.`;
+  avisoDadosAte = Date.now() + 2 * 60 * 1000;
+  atualizarStatusDados();
 }
 
 // Os dados só são carregados depois do login (entrarNoDashboard)
