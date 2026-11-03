@@ -416,6 +416,21 @@
   .people-table td.vazio { text-align: center; color: var(--text-dim); padding: 24px; }
   .col-taxa { width: 22%; }
 
+  /* Relatório: pessoa que abre a lista das demandas */
+  .section-dica { font-size: 13px; font-weight: 400; color: var(--text-dim); }
+  #relBodyPessoas tr.rel-pessoa { cursor: pointer; }
+  .rel-seta { display: inline-block; width: 12px; color: var(--text-dim); transition: transform 0.15s; font-size: 16px; line-height: 1; }
+  tr.rel-pessoa.aberta .rel-seta { transform: rotate(90deg); }
+  tr.rel-pessoa.aberta td { background: var(--hover); border-bottom-color: transparent; }
+  tr.rel-demandas td { padding: 0 4px 14px 34px; background: var(--hover); }
+  tr.rel-demandas ul { list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
+  .rel-demanda { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; }
+  .rel-demanda-topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13.5px; font-weight: 500; }
+  .rel-demanda-topo a { color: var(--text); text-decoration: none; }
+  .rel-demanda-topo a:hover { color: var(--accent-ink); text-decoration: underline; }
+  .rel-demanda-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  @media (max-width: 640px) { tr.rel-demandas td { padding-left: 8px; } .rel-demanda-topo { flex-wrap: wrap; } }
+
   .person-name { font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 10px; }
 
   /* Cada pessoa tem um tom claro próprio (identidade, não dado) */
@@ -1362,7 +1377,7 @@
       </div>
 
       <!-- Produções por pessoa -->
-      <div class="section-title">Produções por pessoa</div>
+      <div class="section-title">Produções por pessoa <span class="section-dica">clique na pessoa para ver as demandas</span></div>
       <div class="card" style="margin-bottom:16px">
         <div style="overflow-x:auto">
           <table class="people-table" id="relTabelaPessoas">
@@ -1767,7 +1782,9 @@ function atualizarStatusDados() {
   const min = Math.max(0, Math.round((Date.now() - dadosDe) / 60000));
   const idade = min < 1 ? 'agora há pouco' : min < 60 ? `há ${min} min` : `há ${Math.floor(min / 60)} h ${min % 60} min`;
   const atrasado = min > INTERVALO_EXPORTACAO_MIN * 2 + 10;
-  marcarStatus('apiStatus', `Deduca: dados de ${hhmm(dadosDe)} (${idade})${atrasado ? ' · sincronização atrasada' : ''}`, atrasado ? 'alerta' : 'ok');
+  const textoStatus = `Deduca: dados de ${hhmm(dadosDe)} (${idade})${atrasado ? ' · sincronização atrasada' : ''}`;
+  marcarStatus('apiStatus', textoStatus, atrasado ? 'alerta' : 'ok');
+  marcarStatus('relStatus', textoStatus, atrasado ? 'alerta' : 'ok'); // o Relatório usa os mesmos dados
   if (el) {
     const proxima = new Date(dadosDe.getTime() + INTERVALO_EXPORTACAO_MIN * 60000);
     el.textContent = Date.now() < avisoDadosAte ? avisoDados
@@ -3446,7 +3463,7 @@ function initRelatorio() {
     marcarStatus('relStatus', 'Aguardando dados do Deduca', 'alerta');
     return;
   }
-  marcarStatus('relStatus', 'Dados carregados', 'ok');
+  atualizarStatusDados();
   onRelTipoChange();
 }
 
@@ -3544,10 +3561,11 @@ function agregarRelatorio() {
 
     // Pessoas (só com responsável definido)
     if (resp && resp !== 'Não definido') {
-      if (!pessoas[resp]) pessoas[resp] = { name: resp, total: 0, conc: 0, horas: 0 };
+      if (!pessoas[resp]) pessoas[resp] = { name: resp, total: 0, conc: 0, horas: 0, tarefas: [] };
       pessoas[resp].total++;
       pessoas[resp].horas += h;
       if (status === 'Concluído') pessoas[resp].conc++;
+      pessoas[resp].tarefas.push(r);
     }
 
     // Projetos
@@ -3596,16 +3614,17 @@ function renderRelatorio() {
   document.getElementById('rel-horas').textContent      = fmt(Math.round(k.horas)) + 'h';
   document.getElementById('rel-periodo-label').textContent = labelPeriodoAtual();
 
-  // Tabela pessoas
+  // Tabela pessoas: clicar na pessoa mostra as demandas dela no período
   document.getElementById('relBodyPessoas').innerHTML = d.pessoas.map(p => {
     const tx = p.total > 0 ? ((p.conc/p.total)*100).toFixed(0) : 0;
-    return `<tr>
-      <td class="person-name">${p.name}</td>
+    const aberto = relPessoasAbertas.has(p.name);
+    return `<tr class="rel-pessoa${aberto ? ' aberta' : ''}" data-pessoa="${esc(p.name)}" tabindex="0" role="button" aria-expanded="${aberto}" title="Ver as demandas de ${esc(p.name)} no período">
+      <td><div class="person-name"><span class="rel-seta" aria-hidden="true">›</span>${avatarPessoa(p.name)}${esc(p.name)}</div></td>
       <td class="num">${p.total}</td>
       <td class="num">${p.conc}</td>
       <td class="num">${tx}%</td>
       <td class="num">${fmtH(p.horas)}</td>
-    </tr>`;
+    </tr>${aberto ? linhaDemandas(p) : ''}`;
   }).join('') || '<tr><td colspan="5" class="vazio">Nenhuma produção no período.</td></tr>';
 
   // Tabela projetos
@@ -3624,6 +3643,47 @@ function renderRelatorio() {
       <td class="num">${p.conc}</td>
     </tr>`).join('') || '<tr><td colspan="3" class="vazio">Nenhuma produção no período.</td></tr>';
 }
+
+// ---- Demandas de cada pessoa (linha que abre embaixo da pessoa) ----
+const relPessoasAbertas = new Set();
+
+function linhaDemandas(p) {
+  const classe = s => s === 'Concluído' ? 'pill-green' : s === 'Em Andamento' ? 'pill-blue' : 'pill-yellow';
+  const itens = [...p.tarefas]
+    .sort((a, b) => String(b['Inicio'] || '').localeCompare(String(a['Inicio'] || '')))
+    .map(r => {
+      const titulo = esc(r['Titulo da tarefa'] || r['Título da tarefa'] || 'Sem título');
+      const link = r['Link tarefa'];
+      const entregue = r['Status'] === 'Concluído' && r['Entrega Final da tarefa'] ? ` · entregue em ${formatDate(r['Entrega Final da tarefa'])}` : '';
+      const disc = r['Nome disciplina tratado'] || r['Disciplina'] || '';
+      // Na pós, a Unidade costuma repetir o nome da disciplina: só mostra quando acrescenta algo
+      const unidade = r['Unidade'] && !(disc && String(r['Unidade']).includes(disc)) ? r['Unidade'] : '';
+      const onde = [r['Projeto'], disc, unidade].filter(Boolean).map(esc).join(' · ');
+      return `<li class="rel-demanda">
+        <div class="rel-demanda-topo">
+          ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener" title="Abrir no Deduca">${titulo}</a>` : `<span>${titulo}</span>`}
+          <span class="pill ${classe(r['Status'])}">${esc(r['Status'] || '—')}</span>
+        </div>
+        <div class="rel-demanda-meta">${onde}</div>
+        <div class="rel-demanda-meta">Início ${formatDate(r['Inicio'] || '')}${entregue} · ${fmtH(parseHoras(r['Horas Apontadas'] || ''))}</div>
+      </li>`;
+    }).join('');
+  return `<tr class="rel-demandas"><td colspan="5"><ul>${itens}</ul></td></tr>`;
+}
+
+function alternarDemandas(nome) {
+  if (relPessoasAbertas.has(nome)) relPessoasAbertas.delete(nome); else relPessoasAbertas.add(nome);
+  renderRelatorio();
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('a')) return; // o link da demanda abre no Deduca sem fechar a lista
+  const tr = e.target.closest('#relBodyPessoas tr.rel-pessoa');
+  if (tr) alternarDemandas(tr.dataset.pessoa);
+});
+document.addEventListener('keydown', e => {
+  const tr = e.target.closest && e.target.closest('#relBodyPessoas tr.rel-pessoa');
+  if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); alternarDemandas(tr.dataset.pessoa); }
+});
 
 // ---- Exportação Excel (uma aba por recorte) ----
 function montarAbaExcel(tipo, periodo) {
