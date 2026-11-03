@@ -1,25 +1,103 @@
 rules_version = '2';
 
-// Regras do Firestore · Dashboard Deduca (pendências da aba Em Andamento).
+// Regras do Firestore · Dashboard Deduca.
 // Cole no console: Firestore Database → Regras → Publicar. Ver firebase/LEIA-ME.md.
 //
-// O dashboard é público e não tem login, então as regras são a proteção:
-// - qualquer um lê e registra, mas só no formato exato da tela;
-// - a única alteração permitida é marcar uma pendência aberta como resolvida;
-// - ninguém apaga nada (o histórico fica completo).
+// Só entra quem tem login (Firebase Authentication) E cadastro ativo na coleção `usuarios`,
+// criado por um administrador. Perfis: equipe, gestao, admin.
+// Os dois administradores principais (lista abaixo) valem mesmo sem cadastro, desde que o
+// e-mail esteja verificado: é assim que o primeiro acesso do sistema acontece.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /pendencias/{id} {
-      allow read: if true;
+    // ---------- quem é quem ----------
+    function logado() { return request.auth != null; }
 
-      allow create: if request.resource.data.keys().hasOnly(
-                         ['idTarefa', 'titulo', 'motivo', 'detalhe', 'registradoPor',
-                          'registradoEm', 'status', 'resolvidoPor', 'resolvidoEm'])
+    function adminPrincipal() {
+      return logado()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in [
+             'diegoeduardo@pucminas.br',
+             'sanziokesley@pucminas.br'];
+    }
+
+    function cadastro() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function ativo() {
+      return logado()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && cadastro().ativo == true;
+    }
+
+    function temAcesso() { return adminPrincipal() || ativo(); }
+    function admin()     { return adminPrincipal() || (ativo() && cadastro().perfil == 'admin'); }
+
+    function texto(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+
+    // ---------- usuários ----------
+    match /usuarios/{uid} {
+      allow read: if admin() || (logado() && request.auth.uid == uid);
+
+      allow create: if admin()
+        && request.resource.data.keys().hasOnly(
+             ['nome', 'email', 'sigla', 'perfil', 'ativo', 'trocarSenha', 'criadoEm', 'criadoPor', 'ultimoAcesso'])
+        && texto(request.resource.data.nome, 1, 80)
+        && texto(request.resource.data.email, 3, 120)
+        && texto(request.resource.data.sigla, 1, 3)
+        && request.resource.data.perfil in ['equipe', 'gestao', 'admin']
+        && request.resource.data.ativo is bool
+        && request.resource.data.trocarSenha is bool
+        && request.resource.data.criadoEm == request.time
+        && request.resource.data.criadoPor == request.auth.uid;
+
+      // Admin altera nome, sigla, perfil, ativo e pede nova troca de senha
+      allow update: if admin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['nome', 'sigla', 'perfil', 'ativo', 'trocarSenha'])
+        && texto(request.resource.data.nome, 1, 80)
+        && texto(request.resource.data.sigla, 1, 3)
+        && request.resource.data.perfil in ['equipe', 'gestao', 'admin']
+        && request.resource.data.ativo is bool
+        && request.resource.data.trocarSenha is bool;
+
+      // A própria pessoa: só registra o último acesso e confirma que trocou a senha
+      allow update: if logado() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['ultimoAcesso', 'trocarSenha'])
+        && request.resource.data.ultimoAcesso == request.time
+        && request.resource.data.trocarSenha in [false, resource.data.trocarSenha];  // nunca liga sozinha
+
+      allow delete: if false;  // para tirar o acesso, desative (ativo = false)
+    }
+
+    // ---------- log de acessos e ações ----------
+    match /log/{id} {
+      allow read: if admin();
+      allow create: if temAcesso()
+        && request.resource.data.keys().hasOnly(['uid', 'nome', 'email', 'tipo', 'acao', 'detalhe', 'em'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && texto(request.resource.data.nome, 1, 80)
+        && request.resource.data.tipo in ['acesso', 'acao']
+        && texto(request.resource.data.acao, 1, 80)
+        && texto(request.resource.data.detalhe, 0, 300)
+        && request.resource.data.em == request.time;
+      allow update, delete: if false;
+    }
+
+    // ---------- pendências (aba Em Andamento) ----------
+    match /pendencias/{id} {
+      allow read: if temAcesso();
+
+      allow create: if temAcesso()
+        && request.resource.data.keys().hasOnly(
+             ['idTarefa', 'titulo', 'motivo', 'detalhe', 'registradoPor', 'registradoPorUid',
+              'registradoEm', 'status', 'resolvidoPor', 'resolvidoPorUid', 'resolvidoEm'])
         && request.resource.data.idTarefa is string
         && request.resource.data.idTarefa.matches('^[0-9]{1,20}$')
-        && request.resource.data.titulo is string
-        && request.resource.data.titulo.size() <= 200
+        && texto(request.resource.data.titulo, 0, 200)
         // Mesma lista do index.html (MOTIVOS_PENDENCIA). Se mudar lá, mude aqui.
         && request.resource.data.motivo in [
              'Aguardando professor/conteudista',
@@ -27,27 +105,26 @@ service cloud.firestore {
              'Problema técnico / sistema',
              'Aguardando aprovação da gestão',
              'Outro']
-        && request.resource.data.detalhe is string
-        && request.resource.data.detalhe.size() <= 500
+        && texto(request.resource.data.detalhe, 0, 500)
         && (request.resource.data.motivo != 'Outro' || request.resource.data.detalhe.size() > 0)
-        && nomeValido(request.resource.data.registradoPor)
+        && texto(request.resource.data.registradoPor, 1, 80)
+        && request.resource.data.registradoPorUid == request.auth.uid
         && request.resource.data.registradoEm == request.time
         && request.resource.data.status == 'aberta'
         && request.resource.data.resolvidoPor == ''
+        && request.resource.data.resolvidoPorUid == ''
         && request.resource.data.resolvidoEm == null;
 
-      allow update: if resource.data.status == 'aberta'
+      allow update: if temAcesso()
+        && resource.data.status == 'aberta'
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['status', 'resolvidoPor', 'resolvidoEm'])
+             .hasOnly(['status', 'resolvidoPor', 'resolvidoPorUid', 'resolvidoEm'])
         && request.resource.data.status == 'resolvida'
-        && nomeValido(request.resource.data.resolvidoPor)
+        && texto(request.resource.data.resolvidoPor, 1, 80)
+        && request.resource.data.resolvidoPorUid == request.auth.uid
         && request.resource.data.resolvidoEm == request.time;
 
       allow delete: if false;
-    }
-
-    function nomeValido(n) {
-      return n is string && n.size() > 0 && n.size() <= 80;
     }
 
     // Qualquer outra coleção fica fechada
