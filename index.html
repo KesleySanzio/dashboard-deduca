@@ -538,12 +538,8 @@
   .tempo-neutro { background: var(--surface2); color: var(--text-dim); }
 
   /* Perfis de acesso: por padrão (equipe) os blocos restritos ficam ocultos */
-  .restrito-gestao { display: none !important; }
-  body.perfil-gestao .nav-item.restrito-gestao { display: flex !important; }
-  body.perfil-gestao .grid-2.restrito-gestao { display: grid !important; }
-  body.perfil-gestao .card.restrito-gestao { display: block !important; }
-  body.perfil-gestao .section-title.restrito-gestao { display: flex !important; }
-  body.perfil-gestao .sub-tab.restrito-gestao { display: inline-block !important; }
+  /* Itens que o perfil não pode ver (definido em Permissões dos perfis) */
+  .sem-permissao { display: none !important; }
 
   /* Pendências (Em Andamento) */
   .task-item.pendente { box-shadow: inset 3px 0 0 var(--yellow-mark); }
@@ -674,6 +670,19 @@
   .btn-mini:hover { color: var(--text); background: var(--hover); }
   .btn-mini.perigo:hover { color: var(--red); }
   .btn-mini:disabled { opacity: 0.6; cursor: wait; }
+
+  /* ===================== PERMISSÕES (admin) ===================== */
+  .perm-tabela { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .perm-tabela th { font-size: 12px; font-weight: 500; color: var(--text-dim); text-align: center; padding: 0 8px 8px; border-bottom: 1px solid var(--border); }
+  .perm-tabela th:first-child { text-align: left; padding-left: 4px; }
+  .perm-tabela td { padding: 9px 8px; border-bottom: 1px solid var(--rule); text-align: center; }
+  .perm-tabela td:first-child { text-align: left; padding-left: 4px; }
+  .perm-tabela tr.perm-grupo td { padding-top: 18px; font-size: 12px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+  .perm-tabela tr.perm-sub td:first-child { padding-left: 22px; color: var(--text-muted); }
+  .perm-tabela input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .perm-tabela input:disabled { cursor: not-allowed; }
+  .perm-acoes { display: flex; gap: 8px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
+  .perm-acoes .equipe-meta { margin-right: auto; }
 
   /* ===================== VER COMO (admin) ===================== */
   .aviso-ver-como {
@@ -1017,28 +1026,28 @@
   <nav class="sidebar-nav">
     <div class="nav-section">Painéis</div>
 
-    <div class="nav-item active" data-page="produtividade" data-label="Produtividade" onclick="navigateTo('produtividade', this)">
+    <div class="nav-item active" data-permissao="pg-produtividade" data-page="produtividade" data-label="Produtividade" onclick="navigateTo('produtividade', this)">
       <span class="nav-icon"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
       <span class="nav-label">Produtividade</span>
     </div>
 
-    <div class="nav-item restrito-gestao" data-page="relatorio" data-label="Relatório gerencial" onclick="navigateTo('relatorio', this)">
+    <div class="nav-item" data-permissao="pg-relatorio" data-page="relatorio" data-label="Relatório gerencial" onclick="navigateTo('relatorio', this)">
       <span class="nav-icon"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></span>
       <span class="nav-label">Relatório gerencial</span>
     </div>
 
-    <div class="nav-item" data-page="emails" data-label="E-mails" onclick="navigateTo('emails', this)">
+    <div class="nav-item" data-permissao="pg-emails" data-page="emails" data-label="E-mails" onclick="navigateTo('emails', this)">
       <span class="nav-icon"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
       <span class="nav-label">E-mails</span>
       <span class="nav-badge">Em breve</span>
     </div>
 
-    <div class="nav-item restrito-gestao" data-page="csc" data-label="CSC · Chamados" onclick="navigateTo('csc', this)">
+    <div class="nav-item" data-permissao="pg-csc" data-page="csc" data-label="CSC · Chamados" onclick="navigateTo('csc', this)">
       <span class="nav-icon"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 0 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M14 5v14" stroke-dasharray="2 2"/></svg></span>
       <span class="nav-label">CSC · Chamados</span>
     </div>
 
-    <div class="nav-item" data-page="telefone" data-label="Telefone" onclick="navigateTo('telefone', this)">
+    <div class="nav-item" data-permissao="pg-telefone" data-page="telefone" data-label="Telefone" onclick="navigateTo('telefone', this)">
       <span class="nav-icon"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></span>
       <span class="nav-label">Telefone</span>
       <span class="nav-badge">Em breve</span>
@@ -1053,6 +1062,7 @@
     </div>
     <div class="chip-menu" onclick="event.stopPropagation()">
       <button class="so-admin" onclick="abrirGerenciarEquipe()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Gerenciar equipe</button>
+      <button class="so-admin" onclick="abrirPermissoes()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Permissões dos perfis</button>
       <button class="so-admin" onclick="abrirLog()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Log de atividades</button>
       <button onclick="abrirTrocarSenha()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2M17 6l3 3M14 9l2 2"/></svg>Trocar senha</button>
       <button onclick="alternarTema()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18" fill="currentColor"/></svg>Aparência <span class="tema-valor" id="temaValor">Automática</span></button>
@@ -1117,16 +1127,16 @@
       </div>
 
       <div class="sub-tabs">
-        <button class="sub-tab active restrito-gestao" onclick="switchSubTab('visao-geral', this)">Visão geral</button>
-        <button class="sub-tab" onclick="switchSubTab('em-aberto', this)">Em aberto</button>
-        <button class="sub-tab" onclick="switchSubTab('em-andamento', this)">Em andamento</button>
+        <button class="sub-tab active" data-permissao="aba-visao-geral" onclick="switchSubTab('visao-geral', this)">Visão geral</button>
+        <button class="sub-tab" data-permissao="aba-em-aberto" onclick="switchSubTab('em-aberto', this)">Em aberto</button>
+        <button class="sub-tab" data-permissao="aba-em-andamento" onclick="switchSubTab('em-andamento', this)">Em andamento</button>
       </div>
 
       <!-- SUB-PANEL: VISÃO GERAL -->
       <div class="sub-panel active" id="subpanel-visao-geral">
 
       
-      <div class="grid-2 restrito-gestao">
+      <div class="grid-2" data-permissao="bloco-pessoas">
         <div class="card col-span-2">
           <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center">
             <span class="card-title-texto">Produtividade por pessoa <span>· clique no título da coluna para ordenar</span></span>
@@ -1148,7 +1158,7 @@
         </div>
       </div>
 
-      <div class="grid-2 restrito-gestao">
+      <div class="grid-2" data-permissao="bloco-graficos">
         <div class="card">
           <div class="card-title">Tarefas por pessoa <span>· 10 com mais tarefas</span></div>
           <div class="chart-wrap" style="height:240px">
@@ -1163,7 +1173,7 @@
         </div>
       </div>
 
-      <div class="grid-2 restrito-gestao">
+      <div class="grid-2" data-permissao="bloco-horas-projetos">
         <div class="card">
           <div class="card-title">Horas apontadas <span>· 8 maiores</span></div>
           <div class="rank-list" id="rankHoras"></div>
@@ -1174,9 +1184,9 @@
         </div>
       </div>
 
-      <div class="section-title restrito-gestao">Evolução mensal</div>
+      <div class="section-title" data-permissao="bloco-evolucao">Evolução mensal</div>
 
-      <div class="card restrito-gestao">
+      <div class="card" data-permissao="bloco-evolucao">
         <div class="card-title">Tarefas concluídas por mês <span>· 8 pessoas com mais tarefas; passe o mouse na legenda para destacar</span></div>
         <div class="chart-wrap" style="height:300px">
           <canvas id="chartMonthly"></canvas>
@@ -1465,28 +1475,134 @@ function navigateTo(page, el) {
 // ===================== PERFIS DE ACESSO =====================
 // O perfil vem do cadastro do usuário logado (coleção `usuarios` no Firestore):
 // equipe = Produtividade; gestao = + Relatório, CSC e Visão Geral; admin = gestao + Equipe e Log.
-function aplicarPerfil(perfil) {
-  const ehGestao = perfil === 'gestao' || perfil === 'admin';
-  document.body.classList.toggle('perfil-gestao', ehGestao);
-  document.body.classList.toggle('perfil-admin', perfil === 'admin');
-  // Se estava numa aba restrita e perdeu acesso, volta para Produtividade
-  if (!ehGestao) {
-    const ativa = document.querySelector('.page.active');
-    if (ativa && (ativa.id === 'page-relatorio' || ativa.id === 'page-csc')) {
-      const btnProd = document.querySelector('.nav-item[data-page="produtividade"]');
-      if (btnProd) navigateTo('produtividade', btnProd);
-    }
-  }
-  // Ajusta a sub-aba padrão da Produtividade conforme o perfil
-  ajustarSubAbaPadrao(ehGestao);
+// ---------- permissões por perfil ----------
+// O que cada perfil vê. Admin vê tudo; Equipe e Gestão são configurados pelo admin
+// em "Permissões dos perfis" (documento config/permissoes no Firestore).
+const ITENS_PERMISSAO = [
+  { grupo: 'Páginas' },
+  { chave: 'pg-produtividade', nome: 'Produtividade' },
+  { chave: 'pg-relatorio', nome: 'Relatório gerencial' },
+  { chave: 'pg-csc', nome: 'CSC · Chamados' },
+  { chave: 'pg-emails', nome: 'E-mails (em breve)' },
+  { chave: 'pg-telefone', nome: 'Telefone (em breve)' },
+  { grupo: 'Abas da Produtividade' },
+  { chave: 'aba-visao-geral', nome: 'Visão geral' },
+  { chave: 'bloco-pessoas', nome: 'Produtividade por pessoa', sub: true },
+  { chave: 'bloco-graficos', nome: 'Tarefas por pessoa e distribuição por status', sub: true },
+  { chave: 'bloco-horas-projetos', nome: 'Horas apontadas e projetos em execução', sub: true },
+  { chave: 'bloco-evolucao', nome: 'Evolução mensal', sub: true },
+  { chave: 'aba-em-aberto', nome: 'Em aberto' },
+  { chave: 'aba-em-andamento', nome: 'Em andamento' },
+];
+const TODAS_PERMISSOES = ITENS_PERMISSAO.filter(i => i.chave).map(i => i.chave);
+// Padrão = como era antes (Equipe sem Relatório, CSC e Visão geral)
+const PERMISSOES_PADRAO = {
+  equipe: ['pg-produtividade', 'pg-emails', 'pg-telefone', 'aba-em-aberto', 'aba-em-andamento'],
+  gestao: TODAS_PERMISSOES,
+};
+let permissoesConfig = null; // vindo do Firestore; null = usa o padrão
+let perfilNaTela = null;     // perfil aplicado agora (o do usuário ou o do "ver como")
+
+function permissoesDe(perfil) {
+  if (perfil === 'admin') return new Set(TODAS_PERMISSOES);
+  const lista = (permissoesConfig && Array.isArray(permissoesConfig[perfil])) ? permissoesConfig[perfil] : PERMISSOES_PADRAO[perfil];
+  return new Set(lista || []);
 }
 
-// Equipe não tem "Visão Geral": abre em "Em Aberto". Gestão abre em "Visão Geral".
-function ajustarSubAbaPadrao(ehGestao) {
-  const geralAtiva = document.querySelector('#subpanel-visao-geral.active');
-  if (!ehGestao && geralAtiva) {
-    const btnAberto = document.querySelector('.sub-tab[onclick*="em-aberto"]'); // pelo destino, não pelo rótulo
-    if (btnAberto) switchSubTab('em-aberto', btnAberto);
+function aplicarPerfil(perfil) {
+  perfilNaTela = perfil;
+  document.body.classList.toggle('perfil-admin', perfil === 'admin');
+  const pode = permissoesDe(perfil);
+  document.querySelectorAll('[data-permissao]').forEach(el => el.classList.toggle('sem-permissao', !pode.has(el.dataset.permissao)));
+  // A Visão geral sem nenhum bloco permitido fica escondida também
+  if (!['bloco-pessoas', 'bloco-graficos', 'bloco-horas-projetos', 'bloco-evolucao'].some(c => pode.has(c)))
+    document.querySelector('.sub-tab[data-permissao="aba-visao-geral"]')?.classList.add('sem-permissao');
+
+  // Se a página aberta saiu do perfil, vai para a primeira permitida
+  const ativa = document.querySelector('.nav-item.active');
+  if (!ativa || ativa.classList.contains('sem-permissao')) {
+    const primeira = document.querySelector('.nav-item[data-permissao]:not(.sem-permissao)');
+    if (primeira) navigateTo(primeira.dataset.page, primeira);
+  }
+  // Idem para a aba da Produtividade
+  const aba = document.querySelector('.sub-tab.active');
+  if (!aba || aba.classList.contains('sem-permissao')) {
+    const primeiraAba = document.querySelector('.sub-tab:not(.sem-permissao)');
+    if (primeiraAba) primeiraAba.click();
+  }
+}
+
+// Acompanha config/permissoes: quando o admin salva, a tela de todos se ajusta na hora
+let permissoesAoVivo = false;
+async function assinarPermissoes() {
+  if (permissoesAoVivo) return;
+  permissoesAoVivo = true;
+  const { fs, db } = fb;
+  fs.onSnapshot(fs.doc(db, 'config', 'permissoes'), snap => {
+    permissoesConfig = snap.exists() ? snap.data() : null;
+    if (perfilNaTela) aplicarPerfil(perfilNaTela);
+  }, err => console.warn('Permissões: usando o padrão.', err));
+}
+
+function abrirPermissoes() {
+  const linhas = ITENS_PERMISSAO.map(i => i.grupo
+    ? `<tr class="perm-grupo"><td colspan="4">${i.grupo}</td></tr>`
+    : `<tr class="${i.sub ? 'perm-sub' : ''}">
+        <td>${i.nome}</td>
+        ${['equipe', 'gestao'].map(p => `<td><input type="checkbox" data-perfil="${p}" value="${i.chave}" ${permissoesDe(p).has(i.chave) ? 'checked' : ''} aria-label="${PERFIS[p]}: ${i.nome}"></td>`).join('')}
+        <td><input type="checkbox" checked disabled aria-label="Admin vê tudo"></td>
+      </tr>`).join('');
+  abrirModalLargo(`
+    <div class="modal-title">Permissões dos perfis</div>
+    <div class="modal-subtitle">O que cada perfil vê no painel. Admin vê tudo. Vale para todos na hora em que você salvar.</div>
+    <table class="perm-tabela">
+      <thead><tr><th>Item</th><th>Equipe</th><th>Gestão</th><th>Admin</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+    <div class="pend-erro" id="permErro" style="margin-top:12px"></div>
+    <div class="perm-acoes">
+      <span class="equipe-meta">Dica: depois de salvar, use "Ver como" em Gerenciar equipe para conferir.</span>
+      <button class="btn-secundario btn-compacto" type="button" onclick="restaurarPermissoesPadrao()">Restaurar padrão</button>
+      <button class="btn-primario btn-compacto" type="button" id="permBotao" onclick="salvarPermissoes()">Salvar</button>
+    </div>`);
+}
+
+function restaurarPermissoesPadrao() {
+  document.querySelectorAll('.perm-tabela input[data-perfil]').forEach(cb => {
+    cb.checked = PERMISSOES_PADRAO[cb.dataset.perfil].includes(cb.value);
+  });
+}
+
+async function salvarPermissoes() {
+  const erro = document.getElementById('permErro');
+  const botao = document.getElementById('permBotao');
+  const nova = { equipe: [], gestao: [] };
+  document.querySelectorAll('.perm-tabela input[data-perfil]:checked').forEach(cb => nova[cb.dataset.perfil].push(cb.value));
+  for (const p of ['equipe', 'gestao']) {
+    if (!nova[p].some(c => c.startsWith('pg-'))) { erro.textContent = `O perfil ${PERFIS[p]} precisa ver pelo menos uma página.`; return; }
+  }
+  erro.textContent = '';
+  // Resumo do que mudou, para o log
+  const mudancas = [];
+  for (const p of ['equipe', 'gestao']) {
+    const antes = permissoesDe(p);
+    const nomes = c => (ITENS_PERMISSAO.find(i => i.chave === c) || {}).nome || c;
+    const deu = nova[p].filter(c => !antes.has(c)).map(nomes);
+    const tirou = [...antes].filter(c => !nova[p].includes(c)).map(nomes);
+    if (deu.length) mudancas.push(`${PERFIS[p]} +${deu.join(', ')}`);
+    if (tirou.length) mudancas.push(`${PERFIS[p]} −${tirou.join(', ')}`);
+  }
+  if (!mudancas.length) { closeTaskModal(); return; }
+  botaoOcupado(botao, true, 'Salvando…');
+  try {
+    const { fs, db } = fb;
+    await fs.setDoc(fs.doc(db, 'config', 'permissoes'), { ...nova, atualizadoEm: fs.serverTimestamp(), atualizadoPor: usuarioAtual.uid });
+    registrarLog('acao', 'Alterou permissões', mudancas.join(' · '));
+    closeTaskModal();
+  } catch(err) {
+    console.error(err);
+    erro.textContent = 'Não foi possível salvar as permissões. Tente de novo.';
+    botaoOcupado(botao, false);
   }
 }
 
@@ -2141,6 +2257,7 @@ function entrarNoDashboard(user, cad) {
     sigla: cad.sigla || siglaDe(cad.nome), perfil: ehAdminPrincipal(user.email) ? 'admin' : cad.perfil,
   };
   aplicarPerfil(usuarioAtual.perfil);
+  assinarPermissoes();
   atualizarChipUsuario();
   esconderPortao();
   fs.updateDoc(fs.doc(db, 'usuarios', user.uid), { ultimoAcesso: fs.serverTimestamp() }).catch(() => {});
@@ -2916,7 +3033,7 @@ function updateKPIs() {
 
 // Clica no card Em Aberto e navega para a sub-aba
 function switchSubTabFromKpi(tab) {
-  const btn = document.querySelector('.sub-tab[onclick*="em-aberto"]'); // pelo destino, não pelo rótulo
+  const btn = document.querySelector('.sub-tab[onclick*="em-aberto"]:not(.sem-permissao)'); // pelo destino, não pelo rótulo
   if (btn) switchSubTab(tab, btn);
 }
 

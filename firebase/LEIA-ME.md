@@ -17,6 +17,8 @@ As regras de segurança estão em `firestore.rules`. A `apiKey` no `index.html` 
 | Gestão | + Visão Geral, Relatório Gerencial e CSC |
 | Admin | + Gerenciar equipe e Log de atividades |
 
+A tabela acima é o padrão. Um admin pode mudar o que Equipe e Gestão veem (páginas, abas e blocos da Visão geral) em **menu do usuário → Permissões dos perfis**; fica salvo em `config/permissoes` e vale na hora para todos. Para conferir, use **Ver como** em Gerenciar equipe. As permissões escondem partes da tela; os dados de tarefas (`dados.json`) continuam públicos no GitHub.
+
 **Admins principais:** Diego Eduardo e Kesley Sanzio (lista em `firestore.rules` e em `ADMINS_PRINCIPAIS` no `index.html`; as duas precisam ser iguais). Eles são admin mesmo sem cadastro, desde que o e-mail esteja confirmado. Ninguém consegue tirar o acesso deles pela tela.
 
 ## Configuração no console (uma vez)
