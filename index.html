@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard · Deduca · CEAD</title>
+<title>Painel de Produção · Deduca · Gestão do AVA</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <script>
   // Aplica o tema salvo antes de desenhar a página (evita piscar)
@@ -129,7 +129,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 18px 14px 14px 16px;
+    padding: 18px 10px 14px 14px;
     min-height: 68px;
     flex-shrink: 0;
   }
@@ -144,8 +144,10 @@
   .marca-simbolo svg { width: 18px; height: 18px; }
 
   .sidebar-logo { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; transition: opacity 0.15s; }
-  .sidebar-logo strong { display: block; font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.2; }
+  .sidebar-logo strong { display: block; font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.2; letter-spacing: -0.01em; }
   .sidebar-logo small { display: block; font-size: 12px; color: var(--text-muted); line-height: 1.3; }
+  .sidebar-logo small b, .portao-sub b, .logo-area p b { font-weight: 600; color: var(--accent-ink); }
+  .sidebar-logo small.fonte, .portao-sub.fonte { font-size: 11.5px; color: var(--text-dim); margin-top: 1px; }
   .sidebar.collapsed .sidebar-logo { opacity: 0; width: 0; flex: 0; }
 
   .toggle-btn {
@@ -640,7 +642,8 @@
   .portao-carregando { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--text-muted); font-size: 14px; padding: 24px 0; }
   .portao-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--accent); animation: girar 0.8s linear infinite; }
   @keyframes girar { to { transform: rotate(360deg); } }
-  .portao-rodape { font-size: 12px; color: var(--text-dim); }
+  .portao-rodape { font-size: 12px; color: var(--text-dim); text-align: center; max-width: 384px; line-height: 1.5; }
+  .portao-card p.portao-proposito { font-size: 13px; margin: -8px 0 4px; }
   .portao-logo { display: flex; justify-content: center; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
   .portao-logo .logo-instituicao img { height: 76px; }
 
@@ -946,10 +949,11 @@
   <div class="portao-card">
     <div class="portao-logo"><span class="logo-instituicao"><img class="logo-claro" src="img/logo-ned-puc-cor.png" alt="NED · PUC Minas"><img class="logo-escuro" src="img/logo-ned-puc-branco.png" alt="NED · PUC Minas"></span></div>
     <div class="portao-marca">
-      <div class="marca-simbolo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h5.5a8 8 0 0 1 0 16H6z"/><path d="M10 9.5h1.5a2.5 2.5 0 0 1 0 5H10z"/></svg></div>
+      <div class="marca-simbolo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4h6.5a5 5 0 0 1 0 10H7"/></svg></div>
       <div>
-        <div class="portao-titulo">Deduca</div>
-        <div class="portao-sub">CEAD · Gestão do AVA</div>
+        <div class="portao-titulo">Painel de Produção</div>
+        <div class="portao-sub">Gestão do AVA · CEAD</div>
+        <div class="portao-sub fonte">Espelho do <b>Deduca</b></div>
       </div>
     </div>
 
@@ -958,6 +962,7 @@
     </div>
 
     <form data-estado="entrar" onsubmit="entrar(event)" hidden>
+      <p class="portao-proposito">Acompanhamento detalhado da produção de materiais acadêmicos registrada no Deduca.</p>
       <h2>Entrar</h2>
       <label>E-mail <input type="email" class="campo" id="loginEmail" autocomplete="username" required></label>
       <label>Senha <input type="password" class="campo" id="loginSenha" autocomplete="current-password" required></label>
@@ -1001,14 +1006,14 @@
       <button class="btn-secundario" onclick="sair()">Sair</button>
     </div>
   </div>
-  <div class="portao-rodape">CEAD · Gestão do AVA · PUC Minas</div>
+  <div class="portao-rodape">CEAD · Centro de Experiência Acadêmica Digital · PUC Minas</div>
 </div>
 
 <!-- ===================== SIDEBAR ===================== -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
-    <div class="marca-simbolo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h5.5a8 8 0 0 1 0 16H6z"/><path d="M10 9.5h1.5a2.5 2.5 0 0 1 0 5H10z"/></svg></div>
-    <div class="sidebar-logo"><strong>Deduca</strong><small>CEAD · Gestão do AVA</small></div>
+    <div class="marca-simbolo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4h6.5a5 5 0 0 1 0 10H7"/></svg></div>
+    <div class="sidebar-logo"><strong>Painel de Produção</strong><small>Gestão do AVA · CEAD</small><small class="fonte">Espelho do <b>Deduca</b></small></div>
     <button class="toggle-btn" onclick="toggleSidebar()" title="Recolher menu" aria-label="Recolher menu"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
   </div>
 
@@ -1059,7 +1064,6 @@
       <button class="sair" onclick="sair()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/></svg>Sair</button>
     </div>
   </div>
-  <div class="sidebar-footer">CEAD / Gestão do AVA · 2026</div>
 </aside>
 
 <!-- ===================== MAIN CONTENT ===================== -->
@@ -1075,7 +1079,7 @@
       <header>
         <div class="logo-area">
           <h1>Produtividade da equipe</h1>
-          <p>Tarefas do Deduca por pessoa, projeto e status</p>
+          <p>Produção registrada no <b>Deduca</b>, por pessoa, projeto e status</p>
         </div>
         <span class="logo-instituicao "><img class="logo-claro" src="img/logo-ned-puc-cor.png" alt="NED · PUC Minas"><img class="logo-escuro" src="img/logo-ned-puc-branco.png" alt="NED · PUC Minas"></span>
       </header>
@@ -1183,7 +1187,7 @@
       </div>
 
       <footer>
-        Dashboard gerado automaticamente · Deduca CEAD / Gestão do AVA
+        Dados sincronizados do Deduca · Gestão do AVA · CEAD
       </footer>
 
       </div><!-- /subpanel-visao-geral -->
@@ -1322,7 +1326,7 @@
         </div>
       </div>
 
-      <footer>Dashboard CSC · Deduca CEAD / Gestão do AVA · Dados via extensão CSC Extrator</footer>
+      <footer>Dados coletados do CSC pela extensão CSC Extrator · Gestão do AVA · CEAD</footer>
     </div>
   </div>
 
@@ -1333,7 +1337,7 @@
       <header>
         <div class="logo-area">
           <h1>Relatório gerencial</h1>
-          <p>Produções por período, pela data de início</p>
+          <p>Produções do <b>Deduca</b> por período, pela data de início</p>
           <div class="linha-status">
             <span id="relStatus" class="ponto">Carregando dados…</span>
           </div>
@@ -1427,7 +1431,7 @@
         </div>
       </div>
 
-      <footer>Relatório Gerencial · Deduca CEAD / Gestão do AVA · Referência: coluna Início</footer>
+      <footer>Dados sincronizados do Deduca · referência: data de início da tarefa · Gestão do AVA · CEAD</footer>
     </div>
   </div>
 
@@ -1787,12 +1791,12 @@ function atualizarStatusDados() {
   const min = Math.max(0, Math.round((Date.now() - dadosDe) / 60000));
   const idade = min < 1 ? 'agora há pouco' : min < 60 ? `há ${min} min` : `há ${Math.floor(min / 60)} h ${min % 60} min`;
   const atrasado = min > INTERVALO_EXPORTACAO_MIN * 2 + 10;
-  marcarStatus('apiStatus', `Dados de ${hhmm(dadosDe)} (${idade})${atrasado ? ' · exportação atrasada' : ''}`, atrasado ? 'alerta' : 'ok');
+  marcarStatus('apiStatus', `Deduca: dados de ${hhmm(dadosDe)} (${idade})${atrasado ? ' · sincronização atrasada' : ''}`, atrasado ? 'alerta' : 'ok');
   if (el) {
     const proxima = new Date(dadosDe.getTime() + INTERVALO_EXPORTACAO_MIN * 60000);
     el.textContent = Date.now() < avisoDadosAte ? avisoDados
-      : atrasado ? 'A planilha deveria ser exportada a cada 30 min. Se continuar assim, avise o Kesley.'
-      : `Próxima exportação da planilha por volta de ${hhmm(proxima)}`;
+      : atrasado ? 'Os dados do Deduca deveriam chegar a cada 30 min. Se continuar assim, avise o Kesley.'
+      : `Próxima sincronização com o Deduca por volta de ${hhmm(proxima)}`;
   }
 }
 
@@ -3205,7 +3209,7 @@ document.querySelector('header').insertAdjacentHTML('afterend', `
 
 document.querySelector('.logo-area p').insertAdjacentHTML('afterend', `
   <div class="linha-status">
-    <span id="apiStatus" class="ponto">Carregando dados…</span>
+    <span id="apiStatus" class="ponto">Carregando dados do Deduca…</span>
     <button onclick="manualRefresh()" id="refreshBtn" class="btn-atualizar"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7L20 8M20 3v5h-5"/></svg>Atualizar agora</button>
     <span id="lastUpdated" class="linha-status-aviso"></span>
   </div>
@@ -3224,7 +3228,7 @@ async function manualRefresh() {
   if (res === 'erro') return;
   avisoDados = res === 'novos'
     ? `Dados novos carregados às ${hhmm(new Date())}.`
-    : `Conferido às ${hhmm(new Date())}: sem novidades. A planilha é exportada a cada 30 min, a próxima por volta de ${hhmm(new Date(dadosDe.getTime() + INTERVALO_EXPORTACAO_MIN * 60000))}.`;
+    : `Conferido às ${hhmm(new Date())}: sem novidades. O Deduca é sincronizado a cada 30 min, a próxima por volta de ${hhmm(new Date(dadosDe.getTime() + INTERVALO_EXPORTACAO_MIN * 60000))}.`;
   avisoDadosAte = Date.now() + 2 * 60 * 1000;
   atualizarStatusDados();
 }
@@ -3426,7 +3430,7 @@ function labelSemestre(key) {
 
 function initRelatorio() {
   if (!rawTaskRows || rawTaskRows.length === 0) {
-    marcarStatus('relStatus', 'Aguardando dados da planilha', 'alerta');
+    marcarStatus('relStatus', 'Aguardando dados do Deduca', 'alerta');
     return;
   }
   marcarStatus('relStatus', 'Dados carregados', 'ok');
