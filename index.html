@@ -276,9 +276,9 @@
     align-items: flex-start;
     justify-content: space-between;
     margin-bottom: 24px;
-    gap: 16px;
-    flex-wrap: wrap;
+    gap: 24px;
   }
+  header .logo-area { flex: 1; min-width: 0; }
 
   .logo-area h1 {
     font-size: 24px;
@@ -290,7 +290,7 @@
   .logo-area p { color: var(--text-muted); font-size: 14px; margin-top: 2px; }
   /* Logo NED · PUC Minas: colorido no tema claro, branco no escuro */
   .logo-instituicao { display: inline-flex; flex-shrink: 0; align-self: center; }
-  .logo-instituicao img { height: 72px; width: auto; display: block; }
+  .logo-instituicao img { height: clamp(48px, 5.2vw, 72px); width: auto; display: block; }
   .logo-instituicao .logo-escuro { display: none; }
   :root[data-tema="escuro"] .logo-instituicao .logo-claro { display: none; }
   :root[data-tema="escuro"] .logo-instituicao .logo-escuro { display: block; }
@@ -299,6 +299,8 @@
     :root:not([data-tema="claro"]) .logo-instituicao .logo-escuro { display: block; }
   }
 
+  .linha-status-aviso { flex-basis: 100%; }
+  @media (min-width: 1280px) { .linha-status-aviso { flex-basis: auto; } }
   .linha-status { display: flex; gap: 6px 14px; margin-top: 10px; font-size: 12px; flex-wrap: wrap; align-items: center; color: var(--text-dim); }
   /* Estado da conexão em destaque: verde conectado, âmbar aguardando, vermelho sem conexão */
   .linha-status .ponto {
@@ -746,18 +748,6 @@
   .equipe-senha { background: var(--green-soft); border-radius: var(--raio); padding: 12px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
   .equipe-senha code { background: var(--surface); border-radius: 4px; padding: 2px 6px; font-size: 13px; color: var(--green); user-select: all; font-family: 'IBM Plex Mono', ui-monospace, monospace; }
   .equipe-senha-dados { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .equipe-lote { border: 1px solid var(--border); border-radius: var(--raio); padding: 0 14px; margin-bottom: 12px; }
-  .equipe-lote summary { cursor: pointer; font-size: 13px; font-weight: 500; padding: 11px 0; color: var(--accent-ink); }
-  .equipe-lote form { display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; }
-  .equipe-lote label { font-size: 13px; color: var(--text-muted); font-weight: 500; display: flex; flex-direction: column; gap: 6px; }
-  .equipe-lote textarea.campo { height: auto; padding: 9px 11px; resize: vertical; font-size: 13px; line-height: 1.5; }
-  .equipe-lote-opcoes { display: grid; grid-template-columns: 160px 1fr auto; gap: 10px; align-items: end; }
-  .equipe-lote-opcoes .campo { height: 36px; font-size: 13px; }
-  .equipe-lote-opcoes .btn-primario { height: 36px; font-size: 13px; }
-  .lote-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  .lote-tabela th { text-align: left; font-weight: 500; color: var(--text-muted); padding: 4px 8px 6px 0; }
-  .lote-tabela td { padding: 5px 8px 5px 0; border-top: 1px solid color-mix(in srgb, var(--green) 18%, transparent); }
-  @media (max-width: 640px) { .equipe-lote-opcoes { grid-template-columns: 1fr; } .lote-tabela { display: block; overflow-x: auto; } }
   .equipe-lista { display: flex; flex-direction: column; margin-top: 8px; border-top: 1px solid var(--border); }
   .equipe-item { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--rule); }
   .equipe-item.inativo { opacity: 0.55; }
@@ -2527,26 +2517,6 @@ function abrirGerenciarEquipe() {
       </select>
       <button class="btn-primario" id="novoBotao">+ Cadastrar</button>
     </form>
-    <details class="equipe-lote">
-      <summary>Cadastrar várias pessoas de uma vez</summary>
-      <form onsubmit="cadastrarEmLote(event)">
-        <label>Uma pessoa por linha: nome e e-mail (pode colar direto da planilha)
-          <textarea class="campo" id="loteLista" rows="6" placeholder="Maria da Silva&#9;maria@pucminas.br&#10;João Souza&#9;joao@pucminas.br" required></textarea>
-        </label>
-        <div class="equipe-lote-opcoes">
-          <label>Perfil
-            <select class="campo" id="lotePerfil">
-              <option value="equipe">Equipe</option><option value="gestao">Gestão</option><option value="admin">Admin</option>
-            </select>
-          </label>
-          <label>Senha provisória
-            <input class="campo" id="loteSenha" maxlength="40" placeholder="Em branco: uma senha diferente para cada pessoa" autocomplete="off">
-          </label>
-          <button class="btn-primario" id="loteBotao">Cadastrar todos</button>
-        </div>
-        <div class="equipe-meta">Todos trocam a senha no primeiro acesso. Uma senha igual para todos é mais fácil de repassar, mas quem souber pode entrar na conta de outra pessoa antes da troca.</div>
-      </form>
-    </details>
     <div class="pend-erro" id="equipeErro"></div>
     <div id="equipeResultado"></div>
     <div class="equipe-lista" id="equipeLista"><div class="empty-state">Carregando…</div></div>`);
@@ -2628,63 +2598,6 @@ async function criarUsuario(nome, email, perfil, senha) {
   });
   registrarLog('acao', 'Cadastrou usuário', `${nome} (${email}) · ${PERFIS[perfil]}`);
   return uid;
-}
-
-// Lê "nome<TAB>e-mail" (ou separado por ; , ou espaços); o e-mail é achado em qualquer posição da linha
-function lerListaLote(texto) {
-  return texto.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-    const m = l.match(/[^\s;,<>]+@[^\s;,<>]+\.[^\s;,<>]+/);
-    const email = m ? m[0].toLowerCase() : '';
-    const nome = (m ? l.replace(m[0], '') : l).replace(/[\t;,<>]+/g, ' ').replace(/\s+/g, ' ').trim();
-    return { nome, email };
-  });
-}
-
-async function cadastrarEmLote(e) {
-  e.preventDefault();
-  const perfil = document.getElementById('lotePerfil').value;
-  const senhaFixa = document.getElementById('loteSenha').value.trim();
-  const erro = document.getElementById('equipeErro');
-  const botao = document.getElementById('loteBotao');
-  erro.textContent = '';
-  const pessoas = lerListaLote(document.getElementById('loteLista').value);
-  if (!pessoas.length) { erro.textContent = 'Cole pelo menos uma linha com nome e e-mail.'; return; }
-  if (senhaFixa && senhaFixa.length < 6) { erro.textContent = 'A senha provisória precisa ter pelo menos 6 caracteres (exigência do Firebase).'; return; }
-
-  botaoOcupado(botao, true, 'Cadastrando…');
-  const resultado = [];
-  for (const p of pessoas) {
-    const linha = { ...p, senha: '', situacao: '' };
-    resultado.push(linha);
-    if (!p.email || !p.nome) { linha.situacao = 'Linha sem nome ou e-mail'; continue; }
-    if (ehAdminPrincipal(p.email)) { linha.situacao = 'Já é admin principal'; continue; }
-    if (usuariosCache.some(u => u.email.toLowerCase() === p.email)) { linha.situacao = 'Já estava cadastrado'; continue; }
-    const senha = senhaFixa || gerarSenhaProvisoria();
-    try {
-      await criarUsuario(p.nome, p.email, perfil, senha);
-      linha.senha = senha;
-      linha.situacao = 'Cadastrado';
-    } catch(err) {
-      console.error(err);
-      linha.situacao = err.code === 'auth/email-already-in-use' ? 'Já existe conta no Firebase com este e-mail'
-        : err.code === 'auth/invalid-email' ? 'E-mail inválido' : 'Erro ao cadastrar';
-    }
-  }
-  botaoOcupado(botao, false);
-
-  const ok = resultado.filter(r => r.senha);
-  window._loteTexto = ok.map(r => `${r.nome}\t${r.email}\t${r.senha}`).join('\n');
-  document.getElementById('equipeResultado').innerHTML = `
-    <div class="equipe-senha">
-      <div><strong>${ok.length} de ${resultado.length}</strong> cadastrado(s) como ${PERFIS[perfil]}. Envie a cada pessoa o e-mail e a senha provisória; as senhas não aparecem de novo.</div>
-      <table class="lote-tabela">
-        <thead><tr><th>Nome</th><th>E-mail</th><th>Senha provisória</th><th>Situação</th></tr></thead>
-        <tbody>${resultado.map(r => `<tr><td>${esc(r.nome || '—')}</td><td>${esc(r.email || '—')}</td><td>${r.senha ? `<code>${esc(r.senha)}</code>` : '<span class="traco">—</span>'}</td><td>${esc(r.situacao)}</td></tr>`).join('')}</tbody>
-      </table>
-      ${ok.length ? '<div><button class="btn-mini" type="button" onclick="navigator.clipboard.writeText(window._loteTexto); this.textContent=\'Copiado\'">Copiar nome, e-mail e senha</button></div>' : ''}
-    </div>`;
-  if (ok.length) document.getElementById('loteLista').value = '';
-  carregarEquipe();
 }
 
 async function cadastrarUsuario(e) {
@@ -3293,8 +3206,8 @@ document.querySelector('header').insertAdjacentHTML('afterend', `
 document.querySelector('.logo-area p').insertAdjacentHTML('afterend', `
   <div class="linha-status">
     <span id="apiStatus" class="ponto">Carregando dados…</span>
-    <span id="lastUpdated"></span>
     <button onclick="manualRefresh()" id="refreshBtn" class="btn-atualizar"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7L20 8M20 3v5h-5"/></svg>Atualizar agora</button>
+    <span id="lastUpdated" class="linha-status-aviso"></span>
   </div>
 `);
 
