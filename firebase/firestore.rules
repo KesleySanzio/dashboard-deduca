@@ -127,6 +127,17 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---------- permissões por perfil (o que Equipe e Gestão veem) ----------
+    match /config/permissoes {
+      allow read: if temAcesso();
+      allow write: if admin()
+        && request.resource.data.keys().hasOnly(['equipe', 'gestao', 'atualizadoEm', 'atualizadoPor'])
+        && request.resource.data.equipe is list && request.resource.data.equipe.size() <= 40
+        && request.resource.data.gestao is list && request.resource.data.gestao.size() <= 40
+        && request.resource.data.atualizadoEm == request.time
+        && request.resource.data.atualizadoPor == request.auth.uid;
+    }
+
     // Qualquer outra coleção fica fechada
     match /{document=**} {
       allow read, write: if false;
