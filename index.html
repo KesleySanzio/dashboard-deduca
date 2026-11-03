@@ -675,6 +675,24 @@
   .btn-mini.perigo:hover { color: var(--red); }
   .btn-mini:disabled { opacity: 0.6; cursor: wait; }
 
+  /* ===================== VER COMO (admin) ===================== */
+  .aviso-ver-como {
+    position: sticky; top: 0; z-index: 150;
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+    padding: 9px 16px; font-size: 13px;
+    background: var(--yellow-soft); color: var(--yellow); border-bottom: 1px solid color-mix(in srgb, var(--yellow-mark) 35%, transparent);
+  }
+  .aviso-ver-como[hidden] { display: none; }
+  .aviso-ver-como strong { font-weight: 600; }
+  .aviso-ver-como button {
+    height: 28px; padding: 0 12px; border-radius: 99px; cursor: pointer; font-size: 12.5px; font-weight: 600;
+    background: var(--primary); color: var(--on-primary); border: none;
+  }
+  .chip-menu .so-ver-como { display: none; }
+  body.modo-ver-como .chip-menu button:not(.sair):not(.so-ver-como) { display: none; }
+  body.modo-ver-como .chip-menu .so-ver-como { display: flex; color: var(--yellow); font-weight: 500; }
+  body.modo-ver-como .chip-avatar { box-shadow: 0 0 0 2px var(--yellow-mark); }
+
   /* ===================== CHIP DO USUÁRIO ===================== */
   .chip-usuario {
     display: flex; align-items: center; gap: 10px;
@@ -1038,6 +1056,7 @@
       <button class="so-admin" onclick="abrirLog()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Log de atividades</button>
       <button onclick="abrirTrocarSenha()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2M17 6l3 3M14 9l2 2"/></svg>Trocar senha</button>
       <button onclick="alternarTema()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18" fill="currentColor"/></svg>Aparência <span class="tema-valor" id="temaValor">Automática</span></button>
+      <button class="so-ver-como" onclick="sairVerComo()">Voltar ao meu acesso</button>
       <button class="sair" onclick="sair()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/></svg>Sair</button>
     </div>
   </div>
@@ -1046,6 +1065,10 @@
 
 <!-- ===================== MAIN CONTENT ===================== -->
 <main class="main" id="main">
+  <div class="aviso-ver-como" id="avisoVerComo" hidden>
+    <span>Você está vendo o painel como <strong id="verComoNome"></strong> (<span id="verComoPerfil"></span>). As ações ficam bloqueadas.</span>
+    <button type="button" onclick="sairVerComo()">Voltar ao meu acesso</button>
+  </div>
 
   <!-- PAGE 1: PRODUTIVIDADE -->
   <div class="page active" id="page-produtividade">
@@ -1462,7 +1485,7 @@ function aplicarPerfil(perfil) {
 function ajustarSubAbaPadrao(ehGestao) {
   const geralAtiva = document.querySelector('#subpanel-visao-geral.active');
   if (!ehGestao && geralAtiva) {
-    const btnAberto = [...document.querySelectorAll('.sub-tab')].find(b => b.textContent.includes('Em Aberto'));
+    const btnAberto = document.querySelector('.sub-tab[onclick*="em-aberto"]'); // pelo destino, não pelo rótulo
     if (btnAberto) switchSubTab('em-aberto', btnAberto);
   }
 }
@@ -2261,9 +2284,36 @@ async function registrarLog(tipo, acao, detalhe) {
   }
 }
 
+// ---------- ver como (admin) ----------
+// Só muda o que a tela mostra (perfil e nome). Login, log e permissões continuam sendo do admin.
+let verComo = null; // { nome, sigla, perfil, email } da pessoa visualizada
+
+function verComoUsuario(uid) {
+  const u = usuariosCache.find(x => x.uid === uid);
+  if (!u) return;
+  verComo = { nome: u.nome, sigla: u.sigla || siglaDe(u.nome), perfil: u.perfil, email: u.email };
+  closeTaskModal();
+  document.body.classList.add('modo-ver-como');
+  document.getElementById('avisoVerComo').hidden = false;
+  document.getElementById('verComoNome').textContent = u.nome;
+  document.getElementById('verComoPerfil').textContent = PERFIS[u.perfil] || u.perfil;
+  aplicarPerfil(u.perfil);
+  atualizarChipUsuario();
+  window.scrollTo(0, 0);
+  registrarLog('acao', 'Visualizou como', `${u.nome} (${u.email}) · ${PERFIS[u.perfil]}`);
+}
+
+function sairVerComo() {
+  verComo = null;
+  document.body.classList.remove('modo-ver-como');
+  document.getElementById('avisoVerComo').hidden = true;
+  aplicarPerfil(usuarioAtual.perfil);
+  atualizarChipUsuario();
+}
+
 // ---------- chip do usuário ----------
 function atualizarChipUsuario() {
-  const u = usuarioAtual;
+  const u = verComo || usuarioAtual;
   document.getElementById('chipAvatar').textContent = u.sigla;
   document.getElementById('chipNome').textContent = u.nome;
   document.getElementById('chipPerfil').textContent = PERFIS[u.perfil] || u.perfil;
@@ -2399,6 +2449,7 @@ function renderEquipe() {
         <select class="campo campo-mini" ${travado ? 'disabled' : ''} onchange="mudarPerfil('${u.uid}', this.value)">
           ${Object.entries(PERFIS).map(([v, l]) => `<option value="${v}"${u.perfil === v ? ' selected' : ''}>${l}</option>`).join('')}
         </select>
+        ${eu ? '' : `<button class="btn-mini" onclick="verComoUsuario('${u.uid}')" title="Ver o painel exatamente como esta pessoa vê">Ver como</button>`}
         <button class="btn-mini" onclick="redefinirSenhaDe('${u.uid}')" title="Envia um e-mail com link para criar nova senha">Nova senha</button>
         ${travado ? '' : (u.ativo
           ? `<button class="btn-mini perigo" onclick="mudarAtivo('${u.uid}', false)">Desativar</button>`
@@ -2623,6 +2674,7 @@ let pendenciasErro = false;   // true se o Firebase não respondeu
 let pendenciasAoVivo = false; // true depois de assinar as atualizações do Firestore
 
 async function chamarPendencias(corpo) {
+  if (verComo) throw new Error('Você está no modo "ver como". Volte ao seu acesso para registrar ou resolver pendências.');
   const { db, fs } = await conectarFirebase();
   const u = usuarioAtual;
   try {
@@ -2707,7 +2759,7 @@ function abrirPendencia(idTarefa) {
     <div class="pend-form" style="margin-top:16px">
       <div class="pend-erro" id="pendErro"></div>
       <button class="pend-salvar resolver" id="pendBotao" onclick="resolverPendencia('${esc(aberta.id)}')">Pendência resolvida</button>
-      <div class="nota">Fica registrado em nome de ${esc(usuarioAtual.nome)}</div>
+      <div class="nota">Fica registrado em nome de ${esc((verComo || usuarioAtual).nome)}</div>
     </div>` : `
     <div class="pend-form">
       <label>Motivo
@@ -2721,7 +2773,7 @@ function abrirPendencia(idTarefa) {
       </label>
       <div class="pend-erro" id="pendErro"></div>
       <button class="pend-salvar" id="pendBotao" onclick="salvarPendencia('${esc(idTarefa)}')">Salvar pendência</button>
-      <div class="nota">Fica registrada em nome de ${esc(usuarioAtual.nome)}</div>
+      <div class="nota">Fica registrada em nome de ${esc((verComo || usuarioAtual).nome)}</div>
     </div>`;
 
   const hist = historico.length ? `
@@ -2864,7 +2916,7 @@ function updateKPIs() {
 
 // Clica no card Em Aberto e navega para a sub-aba
 function switchSubTabFromKpi(tab) {
-  const btn = [...document.querySelectorAll('.sub-tab')].find(b => b.textContent.includes('Em Aberto'));
+  const btn = document.querySelector('.sub-tab[onclick*="em-aberto"]'); // pelo destino, não pelo rótulo
   if (btn) switchSubTab(tab, btn);
 }
 
@@ -3525,6 +3577,7 @@ function montarAbaExcel(tipo, periodo) {
 }
 
 function exportarRelatorioExcel() {
+  if (verComo) { alert('Você está no modo "ver como". Volte ao seu acesso para exportar.'); return; }
   if (!rawTaskRows || rawTaskRows.length === 0) {
     alert('Sem dados para exportar.');
     return;
