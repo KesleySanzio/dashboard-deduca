@@ -698,7 +698,6 @@
     background: var(--primary); color: var(--on-primary); border: none;
   }
   .chip-menu .so-ver-como { display: none; }
-  body.modo-ver-como .chip-menu button:not(.sair):not(.so-ver-como) { display: none; }
   body.modo-ver-como .chip-menu .so-ver-como { display: flex; color: var(--yellow); font-weight: 500; }
   body.modo-ver-como .chip-avatar { box-shadow: 0 0 0 2px var(--yellow-mark); }
 
@@ -2460,7 +2459,7 @@ function abrirModalLargo(html) {
 function abrirTrocarSenha() {
   abrirModalLargo(`
     <div class="modal-title">Trocar senha</div>
-    <div class="modal-subtitle">${esc(usuarioAtual.email)}</div>
+    <div class="modal-subtitle">${esc((verComo || usuarioAtual).email)}</div>
     <form class="pend-form" onsubmit="trocarSenha(event)">
       <label>Senha atual <input type="password" class="campo" id="senhaAtual" autocomplete="current-password" required></label>
       <label>Nova senha <input type="password" class="campo" id="senhaNova" autocomplete="new-password" required></label>
@@ -2474,6 +2473,8 @@ async function trocarSenha(e) {
   e.preventDefault();
   const { au, auth } = fb;
   const erro = document.getElementById('senhaErro');
+  // No ver como a tela é a da pessoa, mas o login é o do admin: trocar aqui mudaria a senha do admin
+  if (verComo) { erro.textContent = 'Você está no modo "ver como". A pessoa troca a própria senha pelo acesso dela.'; return; }
   const nova = document.getElementById('senhaNova').value;
   const problema = validarNovaSenha(nova, document.getElementById('senhaConfirma').value);
   if (problema) { erro.textContent = '⚠ ' + problema; return; }
