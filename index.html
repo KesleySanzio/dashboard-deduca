@@ -606,7 +606,30 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 4px;
+    align-items: center;
   }
+  /* Linha secundária: informações de apoio, discretas */
+  .task-meta-sec {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 6px;
+    align-items: center;
+  }
+  .task-tag-sec {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    font-weight: 400;
+    background: none;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .task-tag-sec .sep { color: var(--text-dim); margin-left: 2px; }
+  /* Destaque do responsável na linha principal */
+  .task-tag-person { font-weight: 600; }
 
   .task-tag {
     font-size: 11px;
@@ -1783,12 +1806,14 @@ function renderEmAberto() {
       <div style="flex:1;min-width:0">
         <div class="task-title">${r['Titulo da tarefa'] || r['Título da tarefa'] || r['Title'] || 'Sem título'}</div>
         <div class="task-meta">
-          <span class="task-tag task-tag-proj">📁 ${r['Projeto'] || 'Sem projeto'}</span>
-          <span class="task-tag task-tag-disc">🏢 ${r['Disciplina'] || '—'}</span>
-          ${(() => { const dp = dataPublicacao(r); return dp ? `<span class="task-tag task-tag-pub">📆 Publicação: ${dp}</span>` : ''; })()}
-          ${(() => { const nd = nomeDisciplinaPos(r); return nd ? `<span class="task-tag task-tag-disc">📘 ${nd}</span>` : ''; })()}
           ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏳ Aberta '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto}</span>`; })()}
-          ${hasLinks ? '<span class="task-tag" style="background:rgba(79,142,247,0.1);color:var(--accent)">🔗 Links</span>' : ''}
+        </div>
+        <div class="task-meta-sec">
+          <span class="task-tag-sec">📁 ${r['Projeto'] || 'Sem projeto'}</span>
+          <span class="task-tag-sec">🏢 ${r['Disciplina'] || '—'}</span>
+          ${(() => { const nd = nomeDisciplinaPos(r); return nd ? `<span class="task-tag-sec">📘 ${nd}</span>` : ''; })()}
+          ${(() => { const dp = dataPublicacao(r); return dp ? `<span class="task-tag-sec">📆 Publicação: ${dp}</span>` : ''; })()}
+          ${hasLinks ? '<span class="task-tag-sec" style="color:var(--accent)">🔗 Links</span>' : ''}
         </div>
       </div>
       <div style="color:var(--text-dim);font-size:16px;flex-shrink:0;align-self:center">›</div>
@@ -1840,15 +1865,17 @@ function renderEmAndamento() {
       <div style="flex:1;min-width:0">
         <div class="task-title">${r['Titulo da tarefa'] || r['Título da tarefa'] || r['Title'] || 'Sem título'}</div>
         <div class="task-meta">
-          <span class="task-tag task-tag-proj">📁 ${r['Projeto'] || 'Sem projeto'}</span>
-          <span class="task-tag task-tag-disc">🏢 ${r['Disciplina'] || '—'}</span>
-          ${(() => { const dp = dataPublicacao(r); return dp ? `<span class="task-tag task-tag-pub">📆 Publicação: ${dp}</span>` : ''; })()}
-          ${(() => { const nd = nomeDisciplinaPos(r); return nd ? `<span class="task-tag task-tag-disc">📘 ${nd}</span>` : ''; })()}
           <span class="task-tag task-tag-person">👤 ${r['Responsavel'] || '—'}</span>
-          <span class="task-tag task-tag-date">📅 Assumida em: ${formatDate(r['Inicio'] || '')}</span>
           ${(() => { const t = tempoTag(daysSince(r['Inicio']||''), '⏱ '); return `<span class="task-tag" style="background:${t.bg};color:${t.cor}">${t.texto} com a tarefa</span>`; })()}
-          ${hasLinks ? '<span class="task-tag" style="background:rgba(79,142,247,0.1);color:var(--accent)">🔗 Links</span>' : ''}
           ${pendTag}
+        </div>
+        <div class="task-meta-sec">
+          <span class="task-tag-sec">📁 ${r['Projeto'] || 'Sem projeto'}</span>
+          <span class="task-tag-sec">🏢 ${r['Disciplina'] || '—'}</span>
+          ${(() => { const nd = nomeDisciplinaPos(r); return nd ? `<span class="task-tag-sec">📘 ${nd}</span>` : ''; })()}
+          ${(() => { const dp = dataPublicacao(r); return dp ? `<span class="task-tag-sec">📆 Publicação: ${dp}</span>` : ''; })()}
+          <span class="task-tag-sec">📅 Assumida em: ${formatDate(r['Inicio'] || '')}</span>
+          ${hasLinks ? '<span class="task-tag-sec" style="color:var(--accent)">🔗 Links</span>' : ''}
         </div>
       </div>
       <div class="task-side">
