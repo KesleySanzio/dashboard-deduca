@@ -1161,7 +1161,7 @@
           </select>
           <span class="task-count" id="countAndamento"></span>
         </div>
-        <div class="pend-aviso" id="pendAvisoTeste" style="display:none">🧪 Modo de teste: as pendências ficam salvas só neste navegador, até o servidor (Apps Script) ser configurado.</div>
+        <div class="pend-aviso" id="pendAvisoTeste" style="display:none">🧪 Modo de teste: as pendências ficam salvas só neste navegador, até o Firebase ser configurado.</div>
         <div class="task-list" id="listEmAndamento"></div>
       </div>
 
@@ -1820,7 +1820,7 @@ function renderEmAndamento() {
   const nPend = tasks.filter(r => pendenciaAberta(r['Id da tarefa'])).length;
   document.getElementById('countAndamento').textContent = `${tasks.length} tarefa${tasks.length !== 1 ? 's' : ''}`
     + (pendenciasErro ? ' · ⚠ pendências indisponíveis' : nPend ? ` · ⚠ ${nPend} com pendência` : '');
-  document.getElementById('pendAvisoTeste').style.display = PENDENCIAS_API ? 'none' : 'block';
+  document.getElementById('pendAvisoTeste').style.display = FIREBASE_CONFIG ? 'none' : 'block';
 
   const list = document.getElementById('listEmAndamento');
   if (tasks.length === 0) {
@@ -1924,11 +1924,20 @@ function closeOnEsc(e) {
 }
 
 // ===================== PENDÊNCIAS (Em Andamento) =====================
-// URL do Web App do Apps Script (ver apps-script/LEIA-ME.md).
-// Vazio = modo de teste: as pendências ficam só neste navegador, para validar a tela.
-const PENDENCIAS_API = "";
+// Configuração do app da Web no Firebase (ver firebase/LEIA-ME.md).
+// null = modo de teste: as pendências ficam só neste navegador, para validar a tela.
+// A apiKey não é senha: só identifica o projeto. Quem protege os dados é o firebase/firestore.rules.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBf-NzQYtt0n7UX9jsL1szrbZvMoEZcp-A",
+  authDomain: "dashboard-deduca.firebaseapp.com",
+  projectId: "dashboard-deduca",
+  storageBucket: "dashboard-deduca.firebasestorage.app",
+  messagingSenderId: "144726609989",
+  appId: "1:144726609989:web:cb341378a3865f0882532c",
+};
+const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 
-// Mesma lista do apps-script/Pendencias.gs (MOTIVOS). Se mudar aqui, mude lá.
+// Mesma lista do firebase/firestore.rules (motivos aceitos). Se mudar aqui, mude lá.
 const MOTIVOS_PENDENCIA = [
   'Aguardando professor/conteudista',
   'Aguardando outro setor',
@@ -1940,23 +1949,72 @@ const MOTIVOS_PENDENCIA = [
 const CHAVE_PEND_TESTE = 'deduca_pendencias_teste';
 const CHAVE_MEU_NOME   = 'deduca_meu_nome';
 let pendencias = [];        // todos os registros (abertos e resolvidos)
-let pendenciasErro = false; // true se o servidor não respondeu
+let pendenciasErro = false; // true se o Firebase não respondeu
+let pendenciasAoVivo = false; // true depois de assinar as atualizações do Firestore
+let fb = null;               // { db, fs } depois de conectar ao Firebase
 
 // Escapa texto digitado pela equipe antes de ir para o HTML
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 }
 
-async function chamarPendencias(corpo) {
-  if (!PENDENCIAS_API) return pendenciasTeste(corpo);
-  // Sem Content-Type JSON: text/plain evita a "pré-consulta" CORS, que o Apps Script não responde.
-  const resp = await fetch(PENDENCIAS_API, { method: 'POST', body: JSON.stringify(corpo) });
-  const r = await resp.json();
-  if (!r.ok) throw new Error(r.erro || 'Erro no servidor.');
-  return r.dados;
+// Carrega o SDK do Firebase só quando há configuração (o resto da página não depende dele)
+async function conectarFirebase() {
+  if (fb) return fb;
+  const [{ initializeApp }, fs] = await Promise.all([
+    import(FIREBASE_SDK + 'firebase-app.js'),
+    import(FIREBASE_SDK + 'firebase-firestore.js'),
+  ]);
+  fb = { db: fs.getFirestore(initializeApp(FIREBASE_CONFIG)), fs };
+  return fb;
 }
 
-// Simula o Apps Script no localStorage (mesmas regras), para testar sem servidor
+// Timestamp do Firestore → texto ISO (o resto do código trabalha com ISO)
+function isoFirestore(t) {
+  return t && typeof t.toDate === 'function' ? t.toDate().toISOString() : (t || '');
+}
+
+async function chamarPendencias(corpo) {
+  if (!FIREBASE_CONFIG) return pendenciasTeste(corpo);
+  const { db, fs } = await conectarFirebase();
+  try {
+    if (corpo.acao === 'registrar') {
+      if (pendenciaAberta(corpo.idTarefa))
+        throw new Error('Esta tarefa já tem uma pendência aberta. Resolva-a antes de registrar outra.');
+      await fs.addDoc(fs.collection(db, 'pendencias'), {
+        idTarefa: corpo.idTarefa, titulo: corpo.titulo.slice(0, 200), motivo: corpo.motivo, detalhe: corpo.detalhe,
+        registradoPor: corpo.nome, registradoEm: fs.serverTimestamp(), status: 'aberta', resolvidoPor: '', resolvidoEm: null,
+      });
+    } else if (corpo.acao === 'resolver') {
+      await fs.updateDoc(fs.doc(db, 'pendencias', corpo.id), {
+        status: 'resolvida', resolvidoPor: corpo.nome, resolvidoEm: fs.serverTimestamp(),
+      });
+    }
+  } catch(err) {
+    // As regras do Firestore recusam dados fora do padrão (ex.: pendência já resolvida)
+    if (err && err.code === 'permission-denied') throw new Error('O servidor recusou o registro. Atualize a página e tente de novo.');
+    throw err;
+  }
+}
+
+// Assina a coleção: qualquer registro feito por alguém aparece na hora para todos
+async function assinarPendencias() {
+  const { db, fs } = await conectarFirebase();
+  fs.onSnapshot(fs.collection(db, 'pendencias'), snap => {
+    pendencias = snap.docs.map(d => {
+      const x = d.data({ serverTimestamps: 'estimate' });
+      return { ...x, id: d.id, registradoEm: isoFirestore(x.registradoEm), resolvidoEm: isoFirestore(x.resolvidoEm) };
+    });
+    pendenciasErro = false;
+    atualizarPendenciasNaTela();
+  }, err => {
+    console.error('Erro ao carregar pendências:', err);
+    pendenciasErro = true;
+    atualizarPendenciasNaTela();
+  });
+}
+
+// Simula o Firebase no localStorage (mesmas regras), para testar sem servidor
 function pendenciasTeste(p) {
   let lista = [];
   try { lista = JSON.parse(localStorage.getItem(CHAVE_PEND_TESTE) || '[]'); } catch(e) {}
@@ -1985,7 +2043,12 @@ function pendenciasTeste(p) {
 
 async function carregarPendencias() {
   try {
-    pendencias = await chamarPendencias({ acao: 'listar' });
+    if (FIREBASE_CONFIG) {
+      // Chamada a cada atualização dos dados, mas só assina uma vez
+      if (!pendenciasAoVivo) { pendenciasAoVivo = true; await assinarPendencias(); }
+      return;
+    }
+    pendencias = pendenciasTeste({ acao: 'listar' });
     pendenciasErro = false;
   } catch(err) {
     console.error('Erro ao carregar pendências:', err);
@@ -2091,7 +2154,7 @@ function lerNomePendencia() {
   return nome;
 }
 
-async function enviarPendencia(corpo, aoConcluir) {
+async function enviarPendencia(corpo) {
   const botao = document.getElementById('pendBotao');
   const erro  = document.getElementById('pendErro');
   const textoBotao = botao.textContent;
@@ -2099,9 +2162,10 @@ async function enviarPendencia(corpo, aoConcluir) {
   botao.textContent = 'Salvando…';
   erro.textContent = '';
   try {
-    aoConcluir(await chamarPendencias(corpo));
+    await chamarPendencias(corpo);
     closeTaskModal();
-    atualizarPendenciasNaTela();
+    // No Firebase a lista se atualiza sozinha (onSnapshot); no modo de teste, relê o navegador
+    if (!FIREBASE_CONFIG) carregarPendencias();
   } catch(err) {
     erro.textContent = '⚠ ' + err.message;
     botao.disabled = false;
@@ -2118,19 +2182,13 @@ function salvarPendencia(idTarefa) {
   if (motivo === 'Outro' && !detalhe) { erro.textContent = '⚠ Para "Outro", descreva o motivo nos detalhes.'; return; }
   if (!nome) { erro.textContent = '⚠ Selecione seu nome.'; return; }
   const tarefa = rawTaskRows.find(r => String(r['Id da tarefa']) === String(idTarefa)) || {};
-  enviarPendencia(
-    { acao: 'registrar', idTarefa: String(idTarefa), titulo: tarefa['Titulo da tarefa'] || '', motivo, detalhe, nome },
-    reg => pendencias.push(reg)
-  );
+  enviarPendencia({ acao: 'registrar', idTarefa: String(idTarefa), titulo: tarefa['Titulo da tarefa'] || '', motivo, detalhe, nome });
 }
 
 function resolverPendencia(id) {
   const nome = lerNomePendencia();
   if (!nome) { document.getElementById('pendErro').textContent = '⚠ Selecione seu nome.'; return; }
-  enviarPendencia({ acao: 'resolver', id, nome }, reg => {
-    const i = pendencias.findIndex(r => r.id === reg.id);
-    if (i >= 0) pendencias[i] = reg; else pendencias.push(reg);
-  });
+  enviarPendencia({ acao: 'resolver', id, nome });
 }
 
 async function fetchData() {
