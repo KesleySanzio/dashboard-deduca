@@ -147,7 +147,6 @@
   .sidebar-logo strong { display: block; font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.2; letter-spacing: -0.01em; }
   .sidebar-logo small { display: block; font-size: 12px; color: var(--text-muted); line-height: 1.3; }
   .sidebar-logo small b, .portao-sub b, .logo-area p b { font-weight: 600; color: var(--accent-ink); }
-  .sidebar-logo small.fonte, .portao-sub.fonte { font-size: 11.5px; color: var(--text-dim); margin-top: 1px; }
   .sidebar.collapsed .sidebar-logo { opacity: 0; width: 0; flex: 0; }
 
   .toggle-btn {
@@ -329,31 +328,6 @@
 
   .badge-setor { display: none; }
 
-  /* Filtro de status: controle segmentado */
-  .filters {
-    display: inline-flex;
-    gap: 2px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-    padding: 3px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 9px;
-  }
-  .filter-btn {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    color: var(--text-muted);
-    height: 30px;
-    padding: 0 14px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-    font-weight: 500;
-  }
-  .filter-btn:hover { color: var(--text); }
-  .filter-btn.active { background: var(--surface); border-color: var(--border); color: var(--text); box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06); }
 
   /* Indicadores: um bloco só, dividido por linhas finas */
   .kpi-row {
@@ -373,7 +347,18 @@
   .kpi-card.yellow { --cor: var(--cor-ambar); }
   .kpi-card.red    { --cor: var(--cor-vermelho); }
   .kpi-card.purple { --cor: var(--cor-violeta); }
-  .kpi-card[onclick]:hover { background: var(--hover); }
+  /* Card = filtro de status da Visão geral; o selecionado fica tingido com a sua cor */
+  .kpi-card[data-filtro] { cursor: pointer; }
+  .kpi-card[data-filtro]:hover { background: var(--hover); }
+  .kpi-card.ativo, .kpi-card.ativo:hover {
+    background: color-mix(in srgb, var(--cor) 8%, var(--surface));
+    box-shadow: inset 0 3px 0 var(--cor), inset 0 0 0 1px color-mix(in srgb, var(--cor) 45%, transparent);
+  }
+  .kpi-card[data-filtro]:focus-visible { outline-offset: -3px; }
+  /* Sem a Visão geral (ex.: Equipe), só os cards que abrem uma aba continuam clicáveis */
+  body.sem-visao-geral .kpi-card[data-filtro]:not([data-aba]) { cursor: default; background: var(--surface); }
+  a.kpi-acao { text-decoration: none; }
+  a.kpi-acao:hover { text-decoration: underline; }
   .kpi-label { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; }
   .kpi-value { font-size: 28px; font-weight: 500; line-height: 1.15; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
   .kpi-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
@@ -923,8 +908,6 @@
   @media (max-width: 640px) {
     .people-table th, .people-table td { padding-left: 8px; padding-right: 8px; }
     .logo-instituicao { display: none; }
-    .filters { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
-    .filter-btn { padding: 0 8px; }
     /* Tabela de pessoas no celular: a taxa fica só em número e a coluna Em andamento sai */
     #peopleTable th:nth-child(6), #peopleTable td:nth-child(6), #peopleTable .progress-bar { display: none; }
     #peopleTable .col-taxa { width: auto; }
@@ -953,7 +936,6 @@
       <div>
         <div class="portao-titulo">Painel de Produção</div>
         <div class="portao-sub">Gestão do AVA · CEAD</div>
-        <div class="portao-sub fonte">Espelho do <b>Deduca</b></div>
       </div>
     </div>
 
@@ -1013,7 +995,7 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <div class="marca-simbolo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4h6.5a5 5 0 0 1 0 10H7"/></svg></div>
-    <div class="sidebar-logo"><strong>Painel de Produção</strong><small>Gestão do AVA · CEAD</small><small class="fonte">Espelho do <b>Deduca</b></small></div>
+    <div class="sidebar-logo"><strong>Painel de Produção</strong><small>Gestão do AVA · CEAD</small></div>
     <button class="toggle-btn" onclick="toggleSidebar()" title="Recolher menu" aria-label="Recolher menu"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
   </div>
 
@@ -1084,33 +1066,26 @@
         <span class="logo-instituicao "><img class="logo-claro" src="img/logo-ned-puc-cor.png" alt="NED · PUC Minas"><img class="logo-escuro" src="img/logo-ned-puc-branco.png" alt="NED · PUC Minas"></span>
       </header>
 
-      <div class="filters" id="filterBar">
-        <button class="filter-btn active" onclick="setFilter('todos', event)">Todos</button>
-        <button class="filter-btn" onclick="setFilter('Concluído', event)">Concluídas</button>
-        <button class="filter-btn" onclick="setFilter('Em Andamento', event)">Em andamento</button>
-        <button class="filter-btn" onclick="setFilter('Em Aberto', event)">Em aberto</button>
-      </div>
-
       <div class="kpi-row">
-        <div class="kpi-card blue">
+        <div class="kpi-card blue ativo" data-filtro="todos" role="button" tabindex="0" title="Ver a Visão geral com todas as tarefas">
           <div class="kpi-label">Total de tarefas</div>
           <div class="kpi-value num" id="kpi-total">—</div>
           <div class="kpi-sub">com responsável definido</div>
         </div>
-        <div class="kpi-card green">
+        <div class="kpi-card green" data-filtro="Concluído" role="button" tabindex="0" title="Filtrar a Visão geral pelas concluídas">
           <div class="kpi-label">Concluídas</div>
           <div class="kpi-value num" id="kpi-conc">—</div>
           <div class="kpi-sub" id="kpi-conc-pct">— de conclusão</div>
         </div>
-        <div class="kpi-card yellow">
+        <div class="kpi-card yellow" data-filtro="Em Andamento" data-aba="em-andamento" role="button" tabindex="0" title="Ver a lista de tarefas em andamento">
           <div class="kpi-label">Em andamento</div>
           <div class="kpi-value num" id="kpi-and">—</div>
           <div class="kpi-sub" id="kpi-and-sub">tarefas ativas</div>
         </div>
-        <div class="kpi-card red" onclick="switchSubTabFromKpi('em-aberto')" style="cursor:pointer" title="Ver tarefas em aberto">
+        <div class="kpi-card red" data-filtro="Em Aberto" data-aba="em-aberto" role="button" tabindex="0" title="Ver a lista de tarefas em aberto">
           <div class="kpi-label">Em aberto</div>
           <div class="kpi-value num" id="kpi-aberto">—</div>
-          <div class="kpi-sub">aguardando início · <span class="kpi-acao">ver lista</span></div>
+          <div class="kpi-sub">aguardando início</div>
         </div>
         <div class="kpi-card purple">
           <div class="kpi-label">Horas apontadas</div>
@@ -1132,7 +1107,7 @@
       <div class="grid-2" data-permissao="bloco-pessoas">
         <div class="card col-span-2">
           <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center">
-            <span class="card-title-texto">Produtividade por pessoa <span>· clique no título da coluna para ordenar</span></span>
+            <span class="card-title-texto">Produtividade por pessoa <span id="filtroAviso">· clique no título da coluna para ordenar</span></span>
             <input id="searchPerson" type="search" class="campo campo-busca" placeholder="Buscar pessoa" oninput="renderTable()" aria-label="Buscar pessoa" />
           </div>
           <table class="people-table" id="peopleTable">
@@ -1510,6 +1485,7 @@ function aplicarPerfil(perfil) {
   // A Visão geral sem nenhum bloco permitido fica escondida também
   if (!['bloco-pessoas', 'bloco-graficos', 'bloco-horas-projetos', 'bloco-evolucao'].some(c => pode.has(c)))
     document.querySelector('.sub-tab[data-permissao="aba-visao-geral"]')?.classList.add('sem-permissao');
+  document.body.classList.toggle('sem-visao-geral', !!document.querySelector('.sub-tab[data-permissao="aba-visao-geral"].sem-permissao'));
 
   // Se a página aberta saiu do perfil, vai para a primeira permitida
   const ativa = document.querySelector('.nav-item.active');
@@ -1872,6 +1848,8 @@ function switchSubTab(tab, el) {
   document.getElementById('subpanel-' + tab).classList.add('active');
   if (tab === 'em-aberto')    renderEmAberto();
   if (tab === 'em-andamento') renderEmAndamento();
+  if (tab === 'visao-geral' && currentFilter !== 'todos' && currentFilter !== 'Concluído') setFilter('todos');
+  marcarCardAtivo();
 }
 
 function populateTaskFilter(selectId, values, placeholder) {
@@ -2943,10 +2921,45 @@ function renderAll() {
 }
 
 // ===================== FILTER =====================
-function setFilter(f, e) {
+// Cards e abas levam às mesmas telas:
+// Em andamento / Em aberto → a aba com a lista; Total → Visão geral; Concluídas → Visão geral só com as concluídas.
+function filtrarPorCard(card) {
+  if (card.dataset.aba) {
+    const aba = document.querySelector(`.sub-tab[onclick*="'${card.dataset.aba}'"]:not(.sem-permissao)`);
+    if (aba) aba.click();
+    return;
+  }
+  const abaGeral = document.querySelector('.sub-tab[data-permissao="aba-visao-geral"]:not(.sem-permissao)');
+  if (!abaGeral) return;
+  const jaNaGeral = abaGeral.classList.contains('active');
+  if (!jaNaGeral) abaGeral.click();
+  // Concluídas: clicar de novo (já na Visão geral) volta para todas
+  setFilter(jaNaGeral && card.dataset.filtro === currentFilter ? 'todos' : card.dataset.filtro);
+}
+
+// O card marcado acompanha a aba aberta (e, na Visão geral, o filtro)
+function marcarCardAtivo() {
+  const aba = (document.querySelector('.sub-tab.active')?.getAttribute('onclick') || '').match(/'([a-z-]+)'/)?.[1];
+  document.querySelectorAll('#page-produtividade .kpi-card[data-filtro]').forEach(c => {
+    const ativo = aba === 'visao-geral' ? (!c.dataset.aba && c.dataset.filtro === currentFilter) : c.dataset.aba === aba;
+    c.classList.toggle('ativo', ativo);
+  });
+}
+document.addEventListener('click', e => {
+  const card = e.target.closest('.kpi-card[data-filtro]');
+  if (card && card.closest('#page-produtividade')) filtrarPorCard(card);
+});
+document.addEventListener('keydown', e => {
+  const card = e.target.closest && e.target.closest('.kpi-card[data-filtro]');
+  if (card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); filtrarPorCard(card); }
+});
+
+const NOMES_FILTRO = { 'Concluído': 'concluídas', 'Em Andamento': 'em andamento', 'Em Aberto': 'em aberto' };
+function setFilter(f) {
   currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  if (e && e.target) e.target.classList.add('active');
+  marcarCardAtivo();
+  const aviso = document.getElementById('filtroAviso');
+  if (aviso) aviso.textContent = f === 'todos' ? '· clique no título da coluna para ordenar' : `· só tarefas ${NOMES_FILTRO[f]} (clique no card de novo para ver todas)`;
   // Limpa o campo de busca ao trocar o filtro
   const searchEl = document.getElementById('searchPerson');
   if (searchEl) searchEl.value = '';
