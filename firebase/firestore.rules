@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// Regras do Firestore · Dashboard Deduca (pendências da aba Em Andamento).
+// Cole no console: Firestore Database → Regras → Publicar. Ver firebase/LEIA-ME.md.
+//
+// O dashboard é público e não tem login, então as regras são a proteção:
+// - qualquer um lê e registra, mas só no formato exato da tela;
+// - a única alteração permitida é marcar uma pendência aberta como resolvida;
+// - ninguém apaga nada (o histórico fica completo).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /pendencias/{id} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['idTarefa', 'titulo', 'motivo', 'detalhe', 'registradoPor',
+                          'registradoEm', 'status', 'resolvidoPor', 'resolvidoEm'])
+        && request.resource.data.idTarefa is string
+        && request.resource.data.idTarefa.matches('^[0-9]{1,20}$')
+        && request.resource.data.titulo is string
+        && request.resource.data.titulo.size() <= 200
+        // Mesma lista do index.html (MOTIVOS_PENDENCIA). Se mudar lá, mude aqui.
+        && request.resource.data.motivo in [
+             'Aguardando professor/conteudista',
+             'Aguardando outro setor',
+             'Problema técnico / sistema',
+             'Aguardando aprovação da gestão',
+             'Outro']
+        && request.resource.data.detalhe is string
+        && request.resource.data.detalhe.size() <= 500
+        && (request.resource.data.motivo != 'Outro' || request.resource.data.detalhe.size() > 0)
+        && nomeValido(request.resource.data.registradoPor)
+        && request.resource.data.registradoEm == request.time
+        && request.resource.data.status == 'aberta'
+        && request.resource.data.resolvidoPor == ''
+        && request.resource.data.resolvidoEm == null;
+
+      allow update: if resource.data.status == 'aberta'
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'resolvidoPor', 'resolvidoEm'])
+        && request.resource.data.status == 'resolvida'
+        && nomeValido(request.resource.data.resolvidoPor)
+        && request.resource.data.resolvidoEm == request.time;
+
+      allow delete: if false;
+    }
+
+    function nomeValido(n) {
+      return n is string && n.size() > 0 && n.size() <= 80;
+    }
+
+    // Qualquer outra coleção fica fechada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
