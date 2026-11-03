@@ -1,30 +1,51 @@
-# Firebase · pendências do dashboard
+# Firebase · Dashboard Deduca
 
-Guarda as pendências registradas na aba **Em Andamento**, com atualização em tempo real para todos.
-Sem o Firebase configurado, o dashboard funciona em **modo de teste**: as pendências ficam salvas só no navegador de quem testou.
+Projeto `dashboard-deduca` (plano gratuito Spark). Usado para:
 
-## Instalação (uma vez, com a conta Google da equipe)
+- **Login** (Firebase Authentication, e-mail e senha): só entra quem um administrador cadastrou.
+- **Usuários** (`usuarios`): nome, e-mail, perfil (`equipe`, `gestao`, `admin`), ativo, último acesso.
+- **Log** (`log`): acessos (entrou / saiu) e ações (pendências, exportações, mudanças na equipe). Só admins leem; ninguém altera nem apaga.
+- **Pendências** (`pendencias`) da aba Em Andamento, em tempo real.
 
-1. Acesse https://console.firebase.google.com e clique em **Criar um projeto**. Sugestão de nome: `dashboard-deduca`.
-   - O Google Analytics pode ficar **desativado**.
-2. No menu da esquerda, abra **Criação → Firestore Database → Criar banco de dados**.
-   - Local: **`southamerica-east1` (São Paulo)**. Não dá para trocar depois.
-   - Modo: **produção**.
-3. Na aba **Regras** do Firestore, apague tudo, cole o conteúdo de `firestore.rules` desta pasta e clique em **Publicar**.
-4. Volte em **Visão geral do projeto** (ícone de engrenagem → **Configurações do projeto**) e, em "Seus apps", clique no ícone **`</>`** (Web).
-   - Apelido: `dashboard`. **Não** marque o Firebase Hosting.
-5. O Firebase mostra um bloco `const firebaseConfig = { ... }`. Copie esse bloco (apiKey, authDomain, projectId etc.).
-6. No `index.html`, troque `const FIREBASE_CONFIG = null;` pelo objeto copiado e suba a alteração por Pull Request.
+As regras de segurança estão em `firestore.rules`. A `apiKey` no `index.html` não é senha: só identifica o projeto.
 
-> A `apiKey` do Firebase **não é senha**: ela só identifica o projeto e pode ficar no código público. Quem protege os dados são as regras do passo 3.
+## Perfis
 
-## Ver as pendências
+| Perfil | Vê |
+|---|---|
+| Equipe | Produtividade (Em Aberto, Em Andamento) e pendências |
+| Gestão | + Visão Geral, Relatório Gerencial e CSC |
+| Admin | + Gerenciar equipe e Log de atividades |
 
-No console: **Firestore Database → Dados → coleção `pendencias`**. Cada documento é um registro, com o motivo, o detalhe, quem registrou e quando, e o status (`aberta` ou `resolvida`).
+**Admins principais:** Diego Eduardo e Kesley Sanzio (lista em `firestore.rules` e em `ADMINS_PRINCIPAIS` no `index.html`; as duas precisam ser iguais). Eles são admin mesmo sem cadastro, desde que o e-mail esteja confirmado. Ninguém consegue tirar o acesso deles pela tela.
+
+## Configuração no console (uma vez)
+
+1. **Authentication → Começar → Método de login → E-mail/senha → Ativar** (deixe "Link do e-mail" desativado) → Salvar.
+2. **Authentication → Modelos (Templates)** → idioma **Português (Brasil)**, para os e-mails de redefinição de senha e de confirmação saírem em português.
+3. **Firestore Database → Regras**: cole o conteúdo de `firestore.rules` e clique em **Publicar**.
+   Faça isso **junto** com a publicação do `index.html` novo: as regras novas exigem login, e a versão antiga do site deixa de funcionar.
+4. **Primeiro acesso dos admins principais:** em **Authentication → Usuários → Adicionar usuário**, cada um cria a própria conta (e-mail `@pucminas.br` + uma senha). Depois entra no dashboard, clica em **Enviar link de confirmação**, confirma pelo e-mail e clica em **Já confirmei**.
+
+## Uso no dia a dia
+
+- **Cadastrar alguém:** menu do usuário (canto inferior esquerdo) → **Gerenciar equipe** → nome, e-mail e perfil → **Cadastrar**. Aparece uma **senha provisória** (só uma vez): envie para a pessoa. No primeiro acesso ela cria a própria senha.
+- **Esqueceu a senha:** a pessoa clica em **Esqueci minha senha** no login, ou o admin clica em **🔄 Senha** na lista. Chega um e-mail do Firebase com o link (pode cair no spam).
+- **Tirar o acesso:** **Desativar** na lista. A conta continua existindo (para o histórico), mas não entra mais. **Reativar** devolve o acesso.
+- Depois de 3 senhas erradas, a tela leva para a redefinição; o Firebase também bloqueia tentativas em excesso no servidor.
+
+## Testar localmente (sem tocar no projeto real)
+
+Emulador do Firebase (precisa de Java 21 e firebase-tools; no computador do Diego estão em `C:\Users\Usuario\Ferramentas`):
+
+```bash
+firebase emulators:start --only auth,firestore --project dashboard-deduca
+```
+
+Depois abra a prévia com `?emulador` no endereço (ex.: `http://localhost:8793/?emulador`). Contas e dados do emulador são fictícios e somem quando ele é desligado.
 
 ## Observações
 
-- A lista de motivos existe em dois lugares: `MOTIVOS_PENDENCIA` no `index.html` e a lista `motivo in [...]` no `firestore.rules`. As duas precisam ser iguais.
-- Como o dashboard é público e sem login, qualquer pessoa com o link consegue registrar. As regras só aceitam registros no formato da tela, só permitem marcar como resolvida e **não permitem apagar**, então o histórico fica completo.
-- A regra de "uma pendência aberta por tarefa" é aplicada pela tela.
-- O plano gratuito (Spark) aguenta com folga o volume da equipe: 50 mil leituras e 20 mil gravações por dia.
+- A lista de motivos de pendência existe em dois lugares: `MOTIVOS_PENDENCIA` no `index.html` e `motivo in [...]` no `firestore.rules`.
+- O login protege a tela e os dados do Firebase. O `dados.json` (tarefas do Deduca) ainda é lido do GitHub, que é público.
+- Plano gratuito: 50 mil leituras e 20 mil gravações por dia no Firestore, com folga para a equipe.

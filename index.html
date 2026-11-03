@@ -706,6 +706,144 @@
     .task-side { justify-content: space-between; }
   }
 
+  /* ===================== PORTÃO DE ENTRADA ===================== */
+  body.sem-sessao .sidebar, body.sem-sessao .main { visibility: hidden; }
+  .portao {
+    position: fixed; inset: 0; z-index: 1000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    padding: 24px 16px;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(79,142,247,0.14), transparent 70%),
+      radial-gradient(ellipse 50% 40% at 85% 100%, rgba(124,58,237,0.12), transparent 70%),
+      var(--bg);
+    transition: opacity 0.35s ease;
+  }
+  .portao.saindo { opacity: 0; pointer-events: none; }
+  .portao-card {
+    width: 100%; max-width: 400px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    padding: 32px 28px; box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    animation: slideUp 0.35s ease;
+  }
+  .portao-marca { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+  .portao-marca img { height: 44px; object-fit: contain; }
+  .portao-marca img:not([src]) { display: none; }
+  .portao-titulo { font-family: var(--font-head); font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+  .portao-titulo span { color: var(--accent); }
+  .portao-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .portao-card form, .portao-card [data-estado] { display: flex; flex-direction: column; gap: 14px; }
+  .portao-card [hidden] { display: none !important; }
+  .portao-card h2 { font-family: var(--font-head); font-size: 17px; font-weight: 700; }
+  .portao-card p { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+  .portao-card label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; display: flex; flex-direction: column; gap: 6px; }
+  .portao-card .portao-check { flex-direction: row; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12px; cursor: pointer; }
+  .portao-check input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .portao-msg { font-size: 12.5px; line-height: 1.5; min-height: 0; }
+  .portao-msg:empty { display: none; }
+  .portao-msg.erro { color: var(--red); }
+  .portao-msg.ok { color: var(--green); }
+  .portao-msg.alerta { color: var(--yellow); }
+  .portao-link { background: none; border: none; color: var(--text-muted); font-family: var(--font-body); font-size: 12px; cursor: pointer; padding: 2px; }
+  .portao-link:hover { color: var(--accent); }
+  .portao-carregando { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--text-muted); font-size: 13px; padding: 24px 0; }
+  .portao-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--accent); animation: girar 0.8s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  .portao-rodape { font-size: 11px; color: var(--text-dim); }
+
+  /* Campos e botões compartilhados (portão, equipe, troca de senha) */
+  .campo {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: var(--font-body); font-size: 14px; padding: 10px 12px;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s; width: 100%; min-width: 0;
+    text-transform: none; letter-spacing: 0;
+  }
+  .campo:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,142,247,0.15); }
+  .campo-mini { font-size: 12px; padding: 5px 8px; width: auto; }
+  .btn-primario, .btn-secundario {
+    border-radius: 8px; font-family: var(--font-body); font-size: 14px; font-weight: 600;
+    padding: 11px 16px; cursor: pointer; transition: background 0.2s, transform 0.1s;
+  }
+  .btn-primario { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+  .btn-primario:hover { background: #3d7de8; }
+  .btn-primario:active, .btn-secundario:active { transform: scale(0.98); }
+  .btn-secundario { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-secundario:hover { border-color: var(--accent); }
+  .btn-primario:disabled, .btn-secundario:disabled { opacity: 0.6; cursor: wait; }
+  .btn-mini {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text-muted); font-family: var(--font-body); font-size: 11.5px; padding: 5px 9px; cursor: pointer; white-space: nowrap;
+  }
+  .btn-mini:hover { color: var(--text); border-color: var(--accent); }
+  .btn-mini.perigo:hover { color: var(--red); border-color: var(--red); }
+
+  /* ===================== CHIP DO USUÁRIO ===================== */
+  .chip-usuario {
+    display: flex; align-items: center; gap: 10px;
+    margin: 8px; padding: 8px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--border); transition: border-color 0.2s, background 0.2s; flex-shrink: 0;
+  }
+  .chip-usuario:hover, .chip-usuario.aberto { border-color: rgba(79,142,247,0.4); background: rgba(79,142,247,0.06); }
+  .chip-avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff;
+    font-family: var(--font-head); font-size: 11px; font-weight: 700;
+  }
+  .chip-texto { min-width: 0; overflow: hidden; transition: opacity 0.2s; }
+  .chip-nome { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip-perfil { font-size: 10.5px; color: var(--text-muted); }
+  .sidebar.collapsed .chip-texto { opacity: 0; width: 0; }
+  .sidebar.collapsed .chip-usuario { border-color: transparent; padding: 7px; }
+  @media (max-width: 900px) {
+    .chip-texto { opacity: 0; width: 0; }
+    .chip-usuario { border-color: transparent; padding: 7px; }
+  }
+  .chip-menu {
+    display: none; position: fixed; left: 8px; bottom: 96px; width: 204px; z-index: 300;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 6px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  }
+  .chip-usuario.aberto .chip-menu { display: flex; flex-direction: column; }
+  .chip-menu button {
+    background: none; border: none; text-align: left; color: var(--text); font-family: var(--font-body);
+    font-size: 13px; padding: 9px 10px; border-radius: 6px; cursor: pointer;
+  }
+  .chip-menu button:hover { background: rgba(79,142,247,0.1); }
+  .chip-menu .sair { color: var(--red); border-top: 1px solid var(--border); border-radius: 0 0 6px 6px; margin-top: 4px; }
+  .chip-menu .so-admin { display: none; }
+  body.perfil-admin .chip-menu .so-admin { display: block; }
+
+  /* ===================== EQUIPE E LOG (admin) ===================== */
+  .modal-box.modal-largo { max-width: 780px; max-height: calc(100vh - 40px); overflow-y: auto; }
+  .equipe-novo { display: grid; grid-template-columns: 1.3fr 1.5fr auto auto; gap: 8px; margin-bottom: 10px; }
+  .equipe-novo .campo { font-size: 13px; padding: 8px 10px; }
+  .equipe-novo .btn-primario { font-size: 13px; padding: 8px 14px; white-space: nowrap; }
+  .equipe-senha { background: rgba(34,197,94,0.07); border: 1px solid rgba(34,197,94,0.3); border-radius: 10px; padding: 12px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .equipe-senha code { background: var(--surface2); border-radius: 4px; padding: 2px 6px; font-size: 13px; color: var(--green); user-select: all; }
+  .equipe-senha-dados { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .equipe-lista { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .equipe-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; }
+  .equipe-item.inativo { opacity: 0.55; }
+  .equipe-info { flex: 1; min-width: 0; }
+  .equipe-nome { font-size: 13px; font-weight: 600; }
+  .equipe-tag { font-size: 10px; font-weight: 500; color: var(--accent); background: rgba(79,142,247,0.1); border-radius: 99px; padding: 1px 7px; margin-left: 4px; }
+  .equipe-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  .equipe-acoes { display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .log-lista { display: flex; flex-direction: column; }
+  .log-item { display: grid; grid-template-columns: 112px 62px 1fr; gap: 10px; align-items: baseline; padding: 8px 4px; border-bottom: 1px solid rgba(31,39,64,0.6); font-size: 12.5px; }
+  .log-quando { color: var(--text-muted); font-variant-numeric: tabular-nums; font-size: 11.5px; }
+  .log-tipo { font-size: 10.5px; font-weight: 600; border-radius: 99px; padding: 1px 8px; text-align: center; }
+  .log-tipo.acesso { background: rgba(79,142,247,0.12); color: var(--accent); }
+  .log-tipo.acao { background: rgba(124,58,237,0.14); color: #a78bfa; }
+  .log-detalhe { color: var(--text-muted); }
+  @media (max-width: 640px) {
+    .equipe-novo { grid-template-columns: 1fr 1fr; }
+    .equipe-item { flex-wrap: wrap; }
+    .equipe-acoes { width: 100%; justify-content: flex-start; }
+    .log-item { grid-template-columns: 1fr auto; }
+    .log-texto { grid-column: 1 / -1; }
+  }
+
   .task-filters {
     display: flex;
     gap: 8px;
@@ -932,7 +1070,69 @@
   }
 </style>
 </head>
-<body>
+<body class="sem-sessao">
+
+<!-- ===================== PORTÃO DE ENTRADA ===================== -->
+<div class="portao" id="portao">
+  <div class="portao-card">
+    <div class="portao-marca">
+      <img id="portaoLogo" alt="NED · PUC Minas">
+      <div>
+        <div class="portao-titulo">Deduca <span>·</span> CEAD</div>
+        <div class="portao-sub">Dashboard da Gestão do AVA</div>
+      </div>
+    </div>
+
+    <div data-estado="carregando">
+      <div class="portao-carregando"><span class="portao-spinner"></span> Conectando…</div>
+    </div>
+
+    <form data-estado="entrar" onsubmit="entrar(event)" hidden>
+      <h2>Entrar</h2>
+      <label>E-mail <input type="email" class="campo" id="loginEmail" autocomplete="username" required></label>
+      <label>Senha <input type="password" class="campo" id="loginSenha" autocomplete="current-password" required></label>
+      <label class="portao-check"><input type="checkbox" id="loginManter" checked> Manter conectado neste computador</label>
+      <div class="portao-msg"></div>
+      <button class="btn-primario" id="loginBotao">Entrar</button>
+      <button type="button" class="portao-link" onclick="document.getElementById('esqueciEmail').value = document.getElementById('loginEmail').value; mostrarPortao('esqueci')">Esqueci minha senha</button>
+    </form>
+
+    <form data-estado="esqueci" onsubmit="enviarRedefinicao(event)" hidden>
+      <h2>Redefinir senha</h2>
+      <p>Informe seu e-mail. Você vai receber um link para criar uma nova senha.</p>
+      <label>E-mail <input type="email" class="campo" id="esqueciEmail" autocomplete="username" required></label>
+      <div class="portao-msg"></div>
+      <button class="btn-primario" id="esqueciBotao">Enviar link</button>
+      <button type="button" class="portao-link" onclick="mostrarPortao('entrar')">← Voltar para o login</button>
+    </form>
+
+    <form data-estado="trocar" onsubmit="salvarSenhaPrimeiroAcesso(event)" hidden>
+      <h2>Crie sua senha</h2>
+      <p>Primeiro acesso: troque a senha provisória por uma só sua (mínimo de 8 caracteres, com letras e números).</p>
+      <label>Nova senha <input type="password" class="campo" id="trocaNova" autocomplete="new-password" required></label>
+      <label>Repita a nova senha <input type="password" class="campo" id="trocaConfirma" autocomplete="new-password" required></label>
+      <div class="portao-msg"></div>
+      <button class="btn-primario" id="trocaBotao">Salvar e entrar</button>
+      <button type="button" class="portao-link" onclick="sair()">Sair</button>
+    </form>
+
+    <div data-estado="verificar" hidden>
+      <h2>Confirme seu e-mail</h2>
+      <p>Por segurança, administradores principais precisam confirmar o e-mail antes do primeiro acesso.</p>
+      <div class="portao-msg"></div>
+      <button class="btn-primario" onclick="enviarVerificacao()">Enviar link de confirmação</button>
+      <button class="btn-secundario" onclick="jaVerifiquei()">Já confirmei</button>
+      <button type="button" class="portao-link" onclick="sair()">Sair</button>
+    </div>
+
+    <div data-estado="sem-acesso" hidden>
+      <h2>Acesso não liberado</h2>
+      <p>Sua conta não tem acesso ativo ao dashboard. Fale com um administrador (Diego ou Kesley).</p>
+      <button class="btn-secundario" onclick="sair()">Sair</button>
+    </div>
+  </div>
+  <div class="portao-rodape">CEAD / Gestão do AVA · PUC Minas</div>
+</div>
 
 <!-- ===================== SIDEBAR ===================== -->
 <aside class="sidebar" id="sidebar">
@@ -972,21 +1172,20 @@
     </div>
   </nav>
 
-  <div class="sidebar-footer" style="display:flex;flex-direction:column;gap:8px">
-    <button id="btnPerfil" onclick="alternarPerfil()" style="
-      background:rgba(79,142,247,0.1);
-      border:1px solid rgba(79,142,247,0.3);
-      border-radius:6px;
-      color:var(--accent);
-      font-size:11px;
-      font-family:'DM Sans',sans-serif;
-      padding:6px 10px;
-      cursor:pointer;
-      transition:all 0.2s;
-      white-space:nowrap;
-    " title="Alternar perfil de acesso">🔑 <span class="perfil-label">Entrar como Gestão</span></button>
-    <span style="font-size:10px;color:var(--text-dim)" class="perfil-label-footer">CEAD / Gestão do AVA · 2026</span>
+  <div class="chip-usuario" id="chipUsuario" onclick="alternarMenuUsuario(event)" title="Sua conta">
+    <div class="chip-avatar" id="chipAvatar">?</div>
+    <div class="chip-texto">
+      <div class="chip-nome" id="chipNome">—</div>
+      <div class="chip-perfil" id="chipPerfil">—</div>
+    </div>
+    <div class="chip-menu" onclick="event.stopPropagation()">
+      <button class="so-admin" onclick="abrirGerenciarEquipe()">👥 Gerenciar equipe</button>
+      <button class="so-admin" onclick="abrirLog()">📋 Log de atividades</button>
+      <button onclick="abrirTrocarSenha()">🔑 Trocar senha</button>
+      <button class="sair" onclick="sair()">↩ Sair</button>
+    </div>
   </div>
+  <div class="sidebar-footer">CEAD / Gestão do AVA · 2026</div>
 </aside>
 
 <!-- ===================== MAIN CONTENT ===================== -->
@@ -1161,7 +1360,6 @@
           </select>
           <span class="task-count" id="countAndamento"></span>
         </div>
-        <div class="pend-aviso" id="pendAvisoTeste" style="display:none">🧪 Modo de teste: as pendências ficam salvas só neste navegador, até o Firebase ser configurado.</div>
         <div class="task-list" id="listEmAndamento"></div>
       </div>
 
@@ -1431,24 +1629,13 @@ function navigateTo(page, el) {
   if (page === 'produtividade' && people.length > 0) buildCharts();
 }
 
-// ===================== CONFIG =====================
-const API_URL = "https://script.google.com/macros/s/AKfycbxg93ZrXU8uM9FBVxrsugRa8BmKV99fuxpq4YwgAj7clKya0O5Gzm5AXIFqXULSJVPF/exec";
-const API_TOKEN = "deduca-dashboard-2026";
-
 // ===================== PERFIS DE ACESSO =====================
-// Senha para entrar no perfil de GESTÃO (acesso total). Troque aqui quando quiser.
-// Atenção: por ser site estático e público, isto é uma divisória de conveniência,
-// não uma barreira de segurança real — não protege dados verdadeiramente sigilosos.
-const SENHA_GESTAO = "@Pucminas2026";
-
+// O perfil vem do cadastro do usuário logado (coleção `usuarios` no Firestore):
+// equipe = Produtividade; gestao = + Relatório, CSC e Visão Geral; admin = gestao + Equipe e Log.
 function aplicarPerfil(perfil) {
-  const ehGestao = perfil === 'gestao';
+  const ehGestao = perfil === 'gestao' || perfil === 'admin';
   document.body.classList.toggle('perfil-gestao', ehGestao);
-  try { localStorage.setItem('deduca_perfil', perfil); } catch(e) {}
-  // Atualiza rótulo do botão
-  document.querySelectorAll('.perfil-label').forEach(el => {
-    el.textContent = ehGestao ? 'Sair da Gestão' : 'Entrar como Gestão';
-  });
+  document.body.classList.toggle('perfil-admin', perfil === 'admin');
   // Se estava numa aba restrita e perdeu acesso, volta para Produtividade
   if (!ehGestao) {
     const ativa = document.querySelector('.page.active');
@@ -1469,28 +1656,6 @@ function ajustarSubAbaPadrao(ehGestao) {
     if (btnAberto) switchSubTab('em-aberto', btnAberto);
   }
 }
-
-function alternarPerfil() {
-  const atual = document.body.classList.contains('perfil-gestao') ? 'gestao' : 'equipe';
-  if (atual === 'gestao') {
-    aplicarPerfil('equipe'); // sair não pede senha
-    return;
-  }
-  const s = prompt('Digite a senha de Gestão:');
-  if (s === null) return; // cancelou
-  if (s === SENHA_GESTAO) {
-    aplicarPerfil('gestao');
-  } else {
-    alert('Senha incorreta.');
-  }
-}
-
-// Restaura perfil salvo ao abrir (padrão: equipe)
-document.addEventListener('DOMContentLoaded', () => {
-  let perfil = 'equipe';
-  try { if (localStorage.getItem('deduca_perfil') === 'gestao') perfil = 'gestao'; } catch(e) {}
-  aplicarPerfil(perfil);
-});
 
 // ▼▼▼ PESSOAS REMOVIDAS DA EQUIPE ▼▼▼
 // Nomes aqui somem de TODO o dashboard (KPIs, tabelas, gráficos, ranking, relatório).
@@ -1820,7 +1985,6 @@ function renderEmAndamento() {
   const nPend = tasks.filter(r => pendenciaAberta(r['Id da tarefa'])).length;
   document.getElementById('countAndamento').textContent = `${tasks.length} tarefa${tasks.length !== 1 ? 's' : ''}`
     + (pendenciasErro ? ' · ⚠ pendências indisponíveis' : nPend ? ` · ⚠ ${nPend} com pendência` : '');
-  document.getElementById('pendAvisoTeste').style.display = FIREBASE_CONFIG ? 'none' : 'block';
 
   const list = document.getElementById('listEmAndamento');
   if (tasks.length === 0) {
@@ -1923,9 +2087,8 @@ function closeOnEsc(e) {
   if (e.key === 'Escape') closeTaskModal();
 }
 
-// ===================== PENDÊNCIAS (Em Andamento) =====================
+// ===================== FIREBASE =====================
 // Configuração do app da Web no Firebase (ver firebase/LEIA-ME.md).
-// null = modo de teste: as pendências ficam só neste navegador, para validar a tela.
 // A apiKey não é senha: só identifica o projeto. Quem protege os dados é o firebase/firestore.rules.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBf-NzQYtt0n7UX9jsL1szrbZvMoEZcp-A",
@@ -1936,7 +2099,553 @@ const FIREBASE_CONFIG = {
   appId: "1:144726609989:web:cb341378a3865f0882532c",
 };
 const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
+// Na prévia local, ?emulador usa o Firebase Emulator (firebase emulators:start) em vez do projeto real
+const USAR_EMULADOR = ['localhost', '127.0.0.1'].includes(location.hostname)
+  && new URLSearchParams(location.search).has('emulador');
+let fb = null; // { appMod, au, fs, auth, db } depois de conectar
 
+async function conectarFirebase() {
+  if (fb) return fb;
+  const [appMod, fs, au] = await Promise.all([
+    import(FIREBASE_SDK + 'firebase-app.js'),
+    import(FIREBASE_SDK + 'firebase-firestore.js'),
+    import(FIREBASE_SDK + 'firebase-auth.js'),
+  ]);
+  const app = appMod.initializeApp(FIREBASE_CONFIG);
+  const auth = au.getAuth(app);
+  const db = fs.getFirestore(app);
+  if (USAR_EMULADOR) {
+    au.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+    fs.connectFirestoreEmulator(db, '127.0.0.1', 8085);
+  }
+  fb = { appMod, au, fs, auth, db };
+  return fb;
+}
+
+// Escapa texto digitado pela equipe antes de ir para o HTML
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+// Timestamp do Firestore → texto ISO (o resto do código trabalha com ISO)
+function isoFirestore(t) {
+  return t && typeof t.toDate === 'function' ? t.toDate().toISOString() : (t || '');
+}
+
+function dataHora(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+// ===================== ACESSO (login, equipe, log) =====================
+// Mesma lista do firebase/firestore.rules: valem como admin mesmo sem cadastro (e-mail verificado).
+const ADMINS_PRINCIPAIS = {
+  'diegoeduardo@pucminas.br': 'Diego Eduardo',
+  'sanziokesley@pucminas.br': 'Kesley Sanzio',
+};
+const PERFIS = { equipe: 'Equipe', gestao: 'Gestão', admin: 'Admin' };
+let usuarioAtual = null;       // { uid, email, nome, sigla, perfil }
+let dashboardIniciado = false; // dados carregados só depois do login
+let falhasLogin = 0;
+
+function ehAdminPrincipal(email) {
+  return String(email || '').toLowerCase() in ADMINS_PRINCIPAIS;
+}
+
+function siglaDe(nome) {
+  return String(nome || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?';
+}
+
+// Mostra uma das telas do portão: carregando, entrar, esqueci, trocar, verificar, sem-acesso
+function mostrarPortao(estado, mensagem) {
+  const portao = document.getElementById('portao');
+  portao.style.display = 'flex';
+  document.body.classList.add('sem-sessao');
+  portao.querySelectorAll('[data-estado]').forEach(el => { el.hidden = el.dataset.estado !== estado; });
+  portao.querySelectorAll('.portao-msg').forEach(el => { el.textContent = ''; el.className = 'portao-msg'; });
+  if (mensagem) avisoPortao(estado, mensagem.texto, mensagem.tipo);
+  const foco = portao.querySelector(`[data-estado="${estado}"] input`);
+  if (foco) setTimeout(() => foco.focus(), 60);
+}
+
+function avisoPortao(estado, texto, tipo) {
+  const el = document.querySelector(`#portao [data-estado="${estado}"] .portao-msg`);
+  if (!el) return;
+  el.textContent = texto;
+  el.className = 'portao-msg' + (tipo ? ' ' + tipo : '');
+}
+
+function esconderPortao() {
+  const portao = document.getElementById('portao');
+  portao.classList.add('saindo');
+  document.body.classList.remove('sem-sessao');
+  setTimeout(() => { portao.style.display = 'none'; portao.classList.remove('saindo'); }, 350);
+}
+
+function botaoOcupado(botao, ocupado, texto) {
+  if (ocupado) { botao.dataset.texto = botao.textContent; botao.textContent = texto || 'Aguarde…'; }
+  else if (botao.dataset.texto) botao.textContent = botao.dataset.texto;
+  botao.disabled = ocupado;
+}
+
+async function iniciarAcesso() {
+  // Reaproveita o logo do cabeçalho (evita repetir a imagem embutida)
+  const logo = document.querySelector('header img');
+  if (logo) document.getElementById('portaoLogo').src = logo.src;
+  mostrarPortao('carregando');
+  try {
+    const { au, auth } = await conectarFirebase();
+    au.onAuthStateChanged(auth, user => {
+      if (!user) { usuarioAtual = null; mostrarPortao('entrar'); return; }
+      carregarCadastro(user);
+    });
+  } catch(err) {
+    console.error('Firebase indisponível:', err);
+    mostrarPortao('entrar', { texto: 'Não foi possível conectar ao servidor. Verifique sua internet e recarregue a página.', tipo: 'erro' });
+  }
+}
+
+// Decide o que fazer com quem acabou de entrar, conforme o cadastro em `usuarios`
+async function carregarCadastro(user) {
+  const { fs, db } = fb;
+  const principal = ehAdminPrincipal(user.email);
+  try {
+    const ref = fs.doc(db, 'usuarios', user.uid);
+    let snap = await fs.getDoc(ref);
+    if (!snap.exists() && principal) {
+      if (!user.emailVerified) { mostrarPortao('verificar'); return; }
+      // Primeiro acesso de um admin principal: cria o próprio cadastro
+      const nome = ADMINS_PRINCIPAIS[user.email.toLowerCase()] || user.displayName || user.email.split('@')[0];
+      await fs.setDoc(ref, {
+        nome, email: user.email, sigla: siglaDe(nome), perfil: 'admin', ativo: true, trocarSenha: false,
+        criadoEm: fs.serverTimestamp(), criadoPor: user.uid,
+      });
+      snap = await fs.getDoc(ref);
+    }
+    const cad = snap.exists() ? snap.data() : null;
+    if (!cad || (!cad.ativo && !principal)) { mostrarPortao('sem-acesso'); return; }
+    if (cad.trocarSenha) { mostrarPortao('trocar'); return; }
+    entrarNoDashboard(user, cad);
+  } catch(err) {
+    console.error('Erro ao carregar cadastro:', err);
+    mostrarPortao('sem-acesso');
+  }
+}
+
+function entrarNoDashboard(user, cad) {
+  const { fs, db } = fb;
+  usuarioAtual = {
+    uid: user.uid, email: user.email, nome: cad.nome,
+    sigla: cad.sigla || siglaDe(cad.nome), perfil: ehAdminPrincipal(user.email) ? 'admin' : cad.perfil,
+  };
+  aplicarPerfil(usuarioAtual.perfil);
+  atualizarChipUsuario();
+  esconderPortao();
+  fs.updateDoc(fs.doc(db, 'usuarios', user.uid), { ultimoAcesso: fs.serverTimestamp() }).catch(() => {});
+  // Um registro de acesso por sessão do navegador (recarregar a página não conta de novo)
+  try {
+    if (sessionStorage.getItem('deduca_acesso') !== user.uid) {
+      sessionStorage.setItem('deduca_acesso', user.uid);
+      registrarLog('acesso', 'Entrou no dashboard');
+    }
+  } catch(e) {}
+  if (!dashboardIniciado) {
+    dashboardIniciado = true;
+    fetchData();
+    scheduleNextRefresh();
+  }
+}
+
+async function entrar(e) {
+  e.preventDefault();
+  const { au, auth } = fb;
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  const manter = document.getElementById('loginManter').checked;
+  const botao = document.getElementById('loginBotao');
+  if (!email || !senha) { avisoPortao('entrar', 'Preencha e-mail e senha.', 'erro'); return; }
+  botaoOcupado(botao, true, 'Entrando…');
+  avisoPortao('entrar', '');
+  try {
+    await au.setPersistence(auth, manter ? au.browserLocalPersistence : au.browserSessionPersistence);
+    await au.signInWithEmailAndPassword(auth, email, senha);
+    falhasLogin = 0;
+    document.getElementById('loginSenha').value = '';
+    // onAuthStateChanged continua daqui
+  } catch(err) {
+    document.getElementById('loginSenha').value = '';
+    if (err.code === 'auth/too-many-requests') {
+      avisoPortao('entrar', '🔒 Muitas tentativas. Aguarde alguns minutos ou redefina sua senha.', 'erro');
+    } else if (err.code === 'auth/network-request-failed') {
+      avisoPortao('entrar', 'Sem conexão com o servidor. Verifique sua internet.', 'erro');
+    } else if (++falhasLogin >= 3) {
+      // Igual ao CINEA: depois de 3 erros, leva para a redefinição de senha
+      document.getElementById('esqueciEmail').value = email;
+      mostrarPortao('esqueci', { texto: '🔒 3 tentativas incorretas. Redefina sua senha para continuar.', tipo: 'alerta' });
+      falhasLogin = 0;
+    } else {
+      avisoPortao('entrar', `E-mail ou senha incorretos. ${3 - falhasLogin} tentativa${3 - falhasLogin > 1 ? 's' : ''} restante${3 - falhasLogin > 1 ? 's' : ''}.`, 'erro');
+    }
+  } finally {
+    botaoOcupado(botao, false);
+  }
+}
+
+async function enviarRedefinicao(e) {
+  e.preventDefault();
+  const { au, auth } = fb;
+  const email = document.getElementById('esqueciEmail').value.trim();
+  const botao = document.getElementById('esqueciBotao');
+  if (!email) { avisoPortao('esqueci', 'Informe seu e-mail.', 'erro'); return; }
+  botaoOcupado(botao, true, 'Enviando…');
+  try {
+    await au.sendPasswordResetEmail(auth, email);
+  } catch(err) {
+    if (err.code === 'auth/invalid-email') { avisoPortao('esqueci', 'E-mail inválido.', 'erro'); botaoOcupado(botao, false); return; }
+    // Outros erros (ex.: e-mail não cadastrado) recebem a mesma resposta, para não revelar quem tem conta
+  }
+  botaoOcupado(botao, false);
+  avisoPortao('esqueci', '✓ Se este e-mail estiver cadastrado, você vai receber um link para criar uma nova senha. Confira também o spam.', 'ok');
+}
+
+function validarNovaSenha(nova, confirma) {
+  if (nova.length < 8) return 'A senha precisa ter pelo menos 8 caracteres.';
+  if (!/[A-Za-z]/.test(nova) || !/\d/.test(nova)) return 'Use letras e números na senha.';
+  if (nova !== confirma) return 'As duas senhas não são iguais.';
+  return '';
+}
+
+// Primeiro acesso (ou troca pedida pelo admin): define a senha definitiva
+async function salvarSenhaPrimeiroAcesso(e) {
+  e.preventDefault();
+  const { au, auth, fs, db } = fb;
+  const nova = document.getElementById('trocaNova').value;
+  const confirma = document.getElementById('trocaConfirma').value;
+  const problema = validarNovaSenha(nova, confirma);
+  if (problema) { avisoPortao('trocar', problema, 'erro'); return; }
+  const botao = document.getElementById('trocaBotao');
+  botaoOcupado(botao, true, 'Salvando…');
+  try {
+    await au.updatePassword(auth.currentUser, nova);
+    await fs.updateDoc(fs.doc(db, 'usuarios', auth.currentUser.uid), { trocarSenha: false, ultimoAcesso: fs.serverTimestamp() });
+    document.getElementById('trocaNova').value = document.getElementById('trocaConfirma').value = '';
+    await carregarCadastro(auth.currentUser);
+    registrarLog('acao', 'Definiu a senha no primeiro acesso');
+  } catch(err) {
+    console.error(err);
+    avisoPortao('trocar', err.code === 'auth/requires-recent-login'
+      ? 'Por segurança, saia e entre de novo com a senha provisória antes de trocar.'
+      : 'Não foi possível salvar a senha. Tente de novo.', 'erro');
+  } finally {
+    botaoOcupado(botao, false);
+  }
+}
+
+async function enviarVerificacao() {
+  const { au, auth } = fb;
+  try {
+    await au.sendEmailVerification(auth.currentUser);
+    avisoPortao('verificar', '✓ Link enviado. Abra o e-mail, clique no link e depois volte aqui.', 'ok');
+  } catch(err) {
+    avisoPortao('verificar', err.code === 'auth/too-many-requests'
+      ? 'Muitos envios seguidos. Aguarde alguns minutos.' : 'Não foi possível enviar. Tente de novo.', 'erro');
+  }
+}
+
+async function jaVerifiquei() {
+  const { auth } = fb;
+  await auth.currentUser.reload();
+  await auth.currentUser.getIdToken(true); // atualiza o "e-mail verificado" que as regras leem
+  if (!auth.currentUser.emailVerified) { avisoPortao('verificar', 'O e-mail ainda não aparece como verificado. Clique no link recebido.', 'erro'); return; }
+  carregarCadastro(auth.currentUser);
+}
+
+async function sair() {
+  if (usuarioAtual) await registrarLog('acesso', 'Saiu do dashboard');
+  try { sessionStorage.removeItem('deduca_acesso'); } catch(e) {}
+  await fb.au.signOut(fb.auth);
+  location.reload(); // limpa os dados da tela
+}
+
+// ---------- log ----------
+async function registrarLog(tipo, acao, detalhe) {
+  try {
+    const { fs, db, auth } = fb;
+    const user = auth.currentUser;
+    if (!user) return;
+    await fs.addDoc(fs.collection(db, 'log'), {
+      uid: user.uid, email: user.email, nome: (usuarioAtual && usuarioAtual.nome) || user.email,
+      tipo, acao, detalhe: String(detalhe || '').slice(0, 300), em: fs.serverTimestamp(),
+    });
+  } catch(err) {
+    console.warn('Log não registrado:', err);
+  }
+}
+
+// ---------- chip do usuário ----------
+function atualizarChipUsuario() {
+  const u = usuarioAtual;
+  document.getElementById('chipAvatar').textContent = u.sigla;
+  document.getElementById('chipNome').textContent = u.nome;
+  document.getElementById('chipPerfil').textContent = PERFIS[u.perfil] || u.perfil;
+}
+
+function alternarMenuUsuario(e) {
+  e.stopPropagation();
+  document.getElementById('chipUsuario').classList.toggle('aberto');
+}
+document.addEventListener('click', () => document.getElementById('chipUsuario')?.classList.remove('aberto'));
+
+// Abre um modal largo com o conteúdo dado (usa o mesmo #taskModal, para o Esc funcionar)
+function abrirModalLargo(html) {
+  closeTaskModal();
+  document.getElementById('chipUsuario').classList.remove('aberto');
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'taskModal';
+  modal.innerHTML = `<div class="modal-box modal-largo"><button class="modal-close" onclick="closeTaskModal()">✕</button>${html}</div>`;
+  modal.addEventListener('click', ev => { if (ev.target === modal) closeTaskModal(); });
+  document.body.appendChild(modal);
+  document.addEventListener('keydown', closeOnEsc);
+  return modal;
+}
+
+// ---------- trocar senha (logado) ----------
+function abrirTrocarSenha() {
+  abrirModalLargo(`
+    <div class="modal-title">Trocar senha</div>
+    <div class="modal-subtitle">${esc(usuarioAtual.email)}</div>
+    <form class="pend-form" onsubmit="trocarSenha(event)">
+      <label>Senha atual <input type="password" class="campo" id="senhaAtual" autocomplete="current-password" required></label>
+      <label>Nova senha <input type="password" class="campo" id="senhaNova" autocomplete="new-password" required></label>
+      <label>Repita a nova senha <input type="password" class="campo" id="senhaConfirma" autocomplete="new-password" required></label>
+      <div class="pend-erro" id="senhaErro"></div>
+      <button class="btn-primario" id="senhaBotao">Salvar nova senha</button>
+    </form>`);
+}
+
+async function trocarSenha(e) {
+  e.preventDefault();
+  const { au, auth } = fb;
+  const erro = document.getElementById('senhaErro');
+  const nova = document.getElementById('senhaNova').value;
+  const problema = validarNovaSenha(nova, document.getElementById('senhaConfirma').value);
+  if (problema) { erro.textContent = '⚠ ' + problema; return; }
+  const botao = document.getElementById('senhaBotao');
+  botaoOcupado(botao, true, 'Salvando…');
+  try {
+    const cred = au.EmailAuthProvider.credential(auth.currentUser.email, document.getElementById('senhaAtual').value);
+    await au.reauthenticateWithCredential(auth.currentUser, cred);
+    await au.updatePassword(auth.currentUser, nova);
+    registrarLog('acao', 'Trocou a senha');
+    closeTaskModal();
+  } catch(err) {
+    erro.textContent = ['auth/invalid-credential', 'auth/wrong-password'].includes(err.code)
+      ? '⚠ Senha atual incorreta.' : '⚠ Não foi possível trocar a senha. Tente de novo.';
+    botaoOcupado(botao, false);
+  }
+}
+
+// ---------- gerenciar equipe (admin) ----------
+let usuariosCache = [];
+
+function abrirGerenciarEquipe() {
+  abrirModalLargo(`
+    <div class="modal-title">👥 Gerenciar equipe</div>
+    <div class="modal-subtitle">Quem pode entrar no dashboard e com qual perfil</div>
+    <form class="equipe-novo" onsubmit="cadastrarUsuario(event)">
+      <input class="campo" id="novoNome" placeholder="Nome completo" maxlength="80" required>
+      <input class="campo" id="novoEmail" type="email" placeholder="E-mail" maxlength="120" required>
+      <select class="campo" id="novoPerfil">
+        <option value="equipe">Equipe</option><option value="gestao">Gestão</option><option value="admin">Admin</option>
+      </select>
+      <button class="btn-primario" id="novoBotao">+ Cadastrar</button>
+    </form>
+    <div class="pend-erro" id="equipeErro"></div>
+    <div id="equipeResultado"></div>
+    <div class="equipe-lista" id="equipeLista"><div class="empty-state">Carregando…</div></div>`);
+  carregarEquipe();
+}
+
+async function carregarEquipe() {
+  const { fs, db } = fb;
+  const lista = document.getElementById('equipeLista');
+  try {
+    const snap = await fs.getDocs(fs.collection(db, 'usuarios'));
+    usuariosCache = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
+      .sort((a, b) => (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'));
+    renderEquipe();
+  } catch(err) {
+    console.error(err);
+    if (lista) lista.innerHTML = '<div class="empty-state">Não foi possível carregar a equipe.</div>';
+  }
+}
+
+function renderEquipe() {
+  const lista = document.getElementById('equipeLista');
+  if (!lista) return;
+  lista.innerHTML = usuariosCache.map(u => {
+    const eu = u.uid === usuarioAtual.uid;
+    const principal = ehAdminPrincipal(u.email);
+    const ultimo = u.ultimoAcesso ? dataHora(isoFirestore(u.ultimoAcesso)) : 'nunca entrou';
+    const travado = eu || principal; // não muda o próprio perfil nem o dos admins principais
+    return `
+    <div class="equipe-item${u.ativo ? '' : ' inativo'}">
+      <div class="avatar" style="background:var(--surface);color:var(--accent)">${esc(u.sigla || siglaDe(u.nome))}</div>
+      <div class="equipe-info">
+        <div class="equipe-nome">${esc(u.nome)}${eu ? ' <span class="equipe-tag">você</span>' : ''}${principal ? ' <span class="equipe-tag">admin principal</span>' : ''}</div>
+        <div class="equipe-meta">${esc(u.email)} · último acesso: ${ultimo}${u.trocarSenha ? ' · <span style="color:var(--yellow)">aguardando primeiro acesso</span>' : ''}${u.ativo ? '' : ' · <span style="color:var(--red)">desativado</span>'}</div>
+      </div>
+      <div class="equipe-acoes">
+        <select class="campo campo-mini" ${travado ? 'disabled' : ''} onchange="mudarPerfil('${u.uid}', this.value)">
+          ${Object.entries(PERFIS).map(([v, l]) => `<option value="${v}"${u.perfil === v ? ' selected' : ''}>${l}</option>`).join('')}
+        </select>
+        <button class="btn-mini" onclick="redefinirSenhaDe('${u.uid}')" title="Envia um e-mail com link para criar nova senha">🔄 Senha</button>
+        ${travado ? '' : (u.ativo
+          ? `<button class="btn-mini perigo" onclick="mudarAtivo('${u.uid}', false)">Desativar</button>`
+          : `<button class="btn-mini" onclick="mudarAtivo('${u.uid}', true)">Reativar</button>`)}
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-state">Nenhum usuário cadastrado.</div>';
+}
+
+// Senha provisória: o admin repassa à pessoa, que troca no primeiro acesso
+function gerarSenhaProvisoria() {
+  const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz', numeros = '23456789';
+  const sorteio = (conj, n) => Array.from(crypto.getRandomValues(new Uint32Array(n)), x => conj[x % conj.length]).join('');
+  return sorteio(letras, 6) + sorteio(numeros, 4);
+}
+
+// Cria a conta no Firebase Auth numa instância separada, para o admin continuar logado
+async function criarContaAuth(email, senha) {
+  const { appMod, au } = fb;
+  const sec = appMod.initializeApp(FIREBASE_CONFIG, 'cadastro-' + Date.now());
+  const secAuth = au.initializeAuth(sec, { persistence: au.inMemoryPersistence });
+  if (USAR_EMULADOR) au.connectAuthEmulator(secAuth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  try {
+    const cred = await au.createUserWithEmailAndPassword(secAuth, email, senha);
+    return cred.user.uid;
+  } finally {
+    await au.signOut(secAuth).catch(() => {});
+    await appMod.deleteApp(sec).catch(() => {});
+  }
+}
+
+async function cadastrarUsuario(e) {
+  e.preventDefault();
+  const { fs, db } = fb;
+  const nome = document.getElementById('novoNome').value.trim();
+  const email = document.getElementById('novoEmail').value.trim().toLowerCase();
+  const perfil = document.getElementById('novoPerfil').value;
+  const erro = document.getElementById('equipeErro');
+  const botao = document.getElementById('novoBotao');
+  erro.textContent = '';
+  if (usuariosCache.some(u => u.email.toLowerCase() === email)) { erro.textContent = '⚠ Este e-mail já está na lista.'; return; }
+  botaoOcupado(botao, true, 'Cadastrando…');
+  const senha = gerarSenhaProvisoria();
+  try {
+    const uid = await criarContaAuth(email, senha);
+    await fs.setDoc(fs.doc(db, 'usuarios', uid), {
+      nome, email, sigla: siglaDe(nome), perfil, ativo: true, trocarSenha: true,
+      criadoEm: fs.serverTimestamp(), criadoPor: usuarioAtual.uid,
+    });
+    registrarLog('acao', 'Cadastrou usuário', `${nome} (${email}) · ${PERFIS[perfil]}`);
+    document.getElementById('novoNome').value = document.getElementById('novoEmail').value = '';
+    document.getElementById('equipeResultado').innerHTML = `
+      <div class="equipe-senha">
+        <div><strong>${esc(nome)}</strong> foi cadastrado(a). Envie estes dados para o primeiro acesso:</div>
+        <div class="equipe-senha-dados">E-mail: <code>${esc(email)}</code> · Senha provisória: <code id="senhaProv">${senha}</code>
+          <button class="btn-mini" type="button" onclick="navigator.clipboard.writeText(document.getElementById('senhaProv').textContent); this.textContent='✓ Copiada'">Copiar</button></div>
+        <div class="equipe-meta">A pessoa vai criar a própria senha ao entrar. Esta senha não aparece de novo.</div>
+      </div>`;
+    carregarEquipe();
+  } catch(err) {
+    console.error(err);
+    erro.textContent = err.code === 'auth/email-already-in-use'
+      ? '⚠ Já existe uma conta com este e-mail no Firebase. Se a pessoa estava desativada, reative-a na lista.'
+      : err.code === 'auth/invalid-email' ? '⚠ E-mail inválido.' : '⚠ Não foi possível cadastrar. Tente de novo.';
+  } finally {
+    botaoOcupado(botao, false);
+  }
+}
+
+function mudarPerfil(uid, perfil) {
+  const u = usuariosCache.find(x => x.uid === uid);
+  if (u) alterarUsuario(u, { perfil }, 'Alterou perfil', `${u.nome}: ${PERFIS[u.perfil]} → ${PERFIS[perfil]}`);
+}
+
+function mudarAtivo(uid, ativo) {
+  const u = usuariosCache.find(x => x.uid === uid);
+  if (u) alterarUsuario(u, { ativo }, ativo ? 'Reativou usuário' : 'Desativou usuário', `${u.nome} (${u.email})`);
+}
+
+async function alterarUsuario(u, mudancas, acao, detalhe) {
+  const { fs, db } = fb;
+  const uid = u.uid;
+  try {
+    await fs.updateDoc(fs.doc(db, 'usuarios', uid), { nome: u.nome, sigla: u.sigla || siglaDe(u.nome), perfil: u.perfil, ativo: u.ativo, trocarSenha: !!u.trocarSenha, ...mudancas });
+    registrarLog('acao', acao, detalhe);
+  } catch(err) {
+    console.error(err);
+    document.getElementById('equipeErro').textContent = '⚠ Não foi possível salvar a alteração.';
+  }
+  carregarEquipe();
+}
+
+async function redefinirSenhaDe(uid) {
+  const u = usuariosCache.find(x => x.uid === uid);
+  if (!u) return;
+  try {
+    await fb.au.sendPasswordResetEmail(fb.auth, u.email);
+    registrarLog('acao', 'Enviou redefinição de senha', `${u.nome} (${u.email})`);
+    document.getElementById('equipeResultado').innerHTML = `<div class="equipe-senha">✓ Link para criar nova senha enviado para <strong>${esc(u.email)}</strong>.</div>`;
+  } catch(err) {
+    document.getElementById('equipeErro').textContent = '⚠ Não foi possível enviar o e-mail.';
+  }
+}
+
+// ---------- log de atividades (admin) ----------
+let logCache = [];
+
+async function abrirLog() {
+  abrirModalLargo(`
+    <div class="modal-title">📋 Log de atividades</div>
+    <div class="modal-subtitle">Últimos 300 registros</div>
+    <div class="task-filters">
+      <select class="task-select" id="logTipo" onchange="renderLog()">
+        <option value="">Acessos e ações</option><option value="acesso">Só acessos</option><option value="acao">Só ações</option>
+      </select>
+      <select class="task-select" id="logPessoa" onchange="renderLog()"><option value="">Todas as pessoas</option></select>
+      <span class="task-count" id="logContagem"></span>
+    </div>
+    <div class="log-lista" id="logLista"><div class="empty-state">Carregando…</div></div>`);
+  const { fs, db } = fb;
+  try {
+    const snap = await fs.getDocs(fs.query(fs.collection(db, 'log'), fs.orderBy('em', 'desc'), fs.limit(300)));
+    logCache = snap.docs.map(d => ({ id: d.id, ...d.data(), em: isoFirestore(d.data().em) }));
+    const nomes = [...new Set(logCache.map(r => r.nome))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    document.getElementById('logPessoa').innerHTML += nomes.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    renderLog();
+  } catch(err) {
+    console.error(err);
+    document.getElementById('logLista').innerHTML = '<div class="empty-state">Não foi possível carregar o log.</div>';
+  }
+}
+
+function renderLog() {
+  const tipo = document.getElementById('logTipo').value;
+  const pessoa = document.getElementById('logPessoa').value;
+  const linhas = logCache.filter(r => (!tipo || r.tipo === tipo) && (!pessoa || r.nome === pessoa));
+  document.getElementById('logContagem').textContent = `${linhas.length} registro${linhas.length !== 1 ? 's' : ''}`;
+  document.getElementById('logLista').innerHTML = linhas.map(r => `
+    <div class="log-item">
+      <span class="log-quando">${dataHora(r.em)}</span>
+      <span class="log-tipo ${r.tipo}">${r.tipo === 'acesso' ? 'Acesso' : 'Ação'}</span>
+      <span class="log-texto"><strong>${esc(r.nome)}</strong> · ${esc(r.acao)}${r.detalhe ? ` <span class="log-detalhe">— ${esc(r.detalhe)}</span>` : ''}</span>
+    </div>`).join('') || '<div class="empty-state">Nenhum registro.</div>';
+}
+
+// ===================== PENDÊNCIAS (Em Andamento) =====================
 // Mesma lista do firebase/firestore.rules (motivos aceitos). Se mudar aqui, mude lá.
 const MOTIVOS_PENDENCIA = [
   'Aguardando professor/conteudista',
@@ -1946,48 +2655,25 @@ const MOTIVOS_PENDENCIA = [
   'Outro',
 ];
 
-const CHAVE_PEND_TESTE = 'deduca_pendencias_teste';
-const CHAVE_MEU_NOME   = 'deduca_meu_nome';
-let pendencias = [];        // todos os registros (abertos e resolvidos)
-let pendenciasErro = false; // true se o Firebase não respondeu
+let pendencias = [];          // todos os registros (abertos e resolvidos)
+let pendenciasErro = false;   // true se o Firebase não respondeu
 let pendenciasAoVivo = false; // true depois de assinar as atualizações do Firestore
-let fb = null;               // { db, fs } depois de conectar ao Firebase
-
-// Escapa texto digitado pela equipe antes de ir para o HTML
-function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-}
-
-// Carrega o SDK do Firebase só quando há configuração (o resto da página não depende dele)
-async function conectarFirebase() {
-  if (fb) return fb;
-  const [{ initializeApp }, fs] = await Promise.all([
-    import(FIREBASE_SDK + 'firebase-app.js'),
-    import(FIREBASE_SDK + 'firebase-firestore.js'),
-  ]);
-  fb = { db: fs.getFirestore(initializeApp(FIREBASE_CONFIG)), fs };
-  return fb;
-}
-
-// Timestamp do Firestore → texto ISO (o resto do código trabalha com ISO)
-function isoFirestore(t) {
-  return t && typeof t.toDate === 'function' ? t.toDate().toISOString() : (t || '');
-}
 
 async function chamarPendencias(corpo) {
-  if (!FIREBASE_CONFIG) return pendenciasTeste(corpo);
   const { db, fs } = await conectarFirebase();
+  const u = usuarioAtual;
   try {
     if (corpo.acao === 'registrar') {
       if (pendenciaAberta(corpo.idTarefa))
         throw new Error('Esta tarefa já tem uma pendência aberta. Resolva-a antes de registrar outra.');
       await fs.addDoc(fs.collection(db, 'pendencias'), {
         idTarefa: corpo.idTarefa, titulo: corpo.titulo.slice(0, 200), motivo: corpo.motivo, detalhe: corpo.detalhe,
-        registradoPor: corpo.nome, registradoEm: fs.serverTimestamp(), status: 'aberta', resolvidoPor: '', resolvidoEm: null,
+        registradoPor: u.nome, registradoPorUid: u.uid, registradoEm: fs.serverTimestamp(),
+        status: 'aberta', resolvidoPor: '', resolvidoPorUid: '', resolvidoEm: null,
       });
     } else if (corpo.acao === 'resolver') {
       await fs.updateDoc(fs.doc(db, 'pendencias', corpo.id), {
-        status: 'resolvida', resolvidoPor: corpo.nome, resolvidoEm: fs.serverTimestamp(),
+        status: 'resolvida', resolvidoPor: u.nome, resolvidoPorUid: u.uid, resolvidoEm: fs.serverTimestamp(),
       });
     }
   } catch(err) {
@@ -2014,47 +2700,17 @@ async function assinarPendencias() {
   });
 }
 
-// Simula o Firebase no localStorage (mesmas regras), para testar sem servidor
-function pendenciasTeste(p) {
-  let lista = [];
-  try { lista = JSON.parse(localStorage.getItem(CHAVE_PEND_TESTE) || '[]'); } catch(e) {}
-  const salvar = () => { try { localStorage.setItem(CHAVE_PEND_TESTE, JSON.stringify(lista)); } catch(e) {} };
-  if (p.acao === 'listar') return lista;
-  if (p.acao === 'registrar') {
-    if (lista.some(r => r.idTarefa === p.idTarefa && r.status === 'aberta'))
-      throw new Error('Esta tarefa já tem uma pendência aberta. Resolva-a antes de registrar outra.');
-    const reg = {
-      id: 'teste-' + Date.now(), idTarefa: p.idTarefa, titulo: p.titulo, motivo: p.motivo, detalhe: p.detalhe,
-      registradoPor: p.nome, registradoEm: new Date().toISOString(), status: 'aberta', resolvidoPor: '', resolvidoEm: '',
-    };
-    lista.push(reg); salvar();
-    return reg;
-  }
-  if (p.acao === 'resolver') {
-    const reg = lista.find(r => r.id === p.id);
-    if (!reg) throw new Error('Pendência não encontrada.');
-    if (reg.status !== 'aberta') throw new Error('Esta pendência já foi resolvida.');
-    Object.assign(reg, { status: 'resolvida', resolvidoPor: p.nome, resolvidoEm: new Date().toISOString() });
-    salvar();
-    return reg;
-  }
-  throw new Error('Ação desconhecida.');
-}
-
 async function carregarPendencias() {
+  // Chamada a cada atualização dos dados, mas só assina uma vez
+  if (pendenciasAoVivo) return;
+  pendenciasAoVivo = true;
   try {
-    if (FIREBASE_CONFIG) {
-      // Chamada a cada atualização dos dados, mas só assina uma vez
-      if (!pendenciasAoVivo) { pendenciasAoVivo = true; await assinarPendencias(); }
-      return;
-    }
-    pendencias = pendenciasTeste({ acao: 'listar' });
-    pendenciasErro = false;
+    await assinarPendencias();
   } catch(err) {
     console.error('Erro ao carregar pendências:', err);
     pendenciasErro = true;
+    atualizarPendenciasNaTela();
   }
-  atualizarPendenciasNaTela();
 }
 
 function atualizarPendenciasNaTela() {
@@ -2067,19 +2723,6 @@ function atualizarPendenciasNaTela() {
 function pendenciaAberta(idTarefa) {
   const id = String(idTarefa == null ? '' : idTarefa);
   return pendencias.find(r => String(r.idTarefa) === id && r.status === 'aberta') || null;
-}
-
-function dataHora(iso) {
-  const d = new Date(iso);
-  return isNaN(d) ? '—' : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-}
-
-function opcoesNomes() {
-  let meu = '';
-  try { meu = localStorage.getItem(CHAVE_MEU_NOME) || ''; } catch(e) {}
-  const nomes = people.map(p => p.name).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  return '<option value="">Selecione seu nome…</option>'
-    + nomes.map(n => `<option value="${esc(n)}"${n === meu ? ' selected' : ''}>${esc(n)}</option>`).join('');
 }
 
 function abrirPendencia(idTarefa) {
@@ -2099,11 +2742,9 @@ function abrirPendencia(idTarefa) {
       <div class="pend-info-meta">Registrada por ${esc(aberta.registradoPor)} em ${dataHora(aberta.registradoEm)} · ${tempoTag(daysSince(aberta.registradoEm), '').texto}</div>
     </div>
     <div class="pend-form" style="margin-top:16px">
-      <label>Quem está resolvendo
-        <select class="task-select" id="pendNome">${opcoesNomes()}</select>
-      </label>
       <div class="pend-erro" id="pendErro"></div>
       <button class="pend-salvar resolver" id="pendBotao" onclick="resolverPendencia('${esc(aberta.id)}')">✓ Pendência resolvida</button>
+      <div class="pend-info-meta" style="text-align:center">Fica registrado em nome de ${esc(usuarioAtual.nome)}</div>
     </div>` : `
     <div class="pend-form">
       <label>Motivo
@@ -2115,11 +2756,9 @@ function abrirPendencia(idTarefa) {
       <label>Detalhes <span style="text-transform:none;letter-spacing:0;color:var(--text-dim)">(obrigatório para "Outro")</span>
         <textarea id="pendDetalhe" maxlength="500" placeholder="Ex.: aguardando o professor enviar o material da unidade 2"></textarea>
       </label>
-      <label>Quem está registrando
-        <select class="task-select" id="pendNome">${opcoesNomes()}</select>
-      </label>
       <div class="pend-erro" id="pendErro"></div>
       <button class="pend-salvar" id="pendBotao" onclick="salvarPendencia('${esc(idTarefa)}')">Salvar pendência</button>
+      <div class="pend-info-meta" style="text-align:center">Fica registrada em nome de ${esc(usuarioAtual.nome)}</div>
     </div>`;
 
   const hist = historico.length ? `
@@ -2148,47 +2787,36 @@ function abrirPendencia(idTarefa) {
   document.addEventListener('keydown', closeOnEsc);
 }
 
-function lerNomePendencia() {
-  const nome = document.getElementById('pendNome').value;
-  if (nome) { try { localStorage.setItem(CHAVE_MEU_NOME, nome); } catch(e) {} }
-  return nome;
-}
-
-async function enviarPendencia(corpo) {
+async function enviarPendencia(corpo, acaoLog, detalheLog) {
   const botao = document.getElementById('pendBotao');
   const erro  = document.getElementById('pendErro');
-  const textoBotao = botao.textContent;
-  botao.disabled = true;
-  botao.textContent = 'Salvando…';
+  botaoOcupado(botao, true, 'Salvando…');
   erro.textContent = '';
   try {
     await chamarPendencias(corpo);
-    closeTaskModal();
-    // No Firebase a lista se atualiza sozinha (onSnapshot); no modo de teste, relê o navegador
-    if (!FIREBASE_CONFIG) carregarPendencias();
+    registrarLog('acao', acaoLog, detalheLog);
+    closeTaskModal(); // a lista se atualiza sozinha (onSnapshot)
   } catch(err) {
     erro.textContent = '⚠ ' + err.message;
-    botao.disabled = false;
-    botao.textContent = textoBotao;
+    botaoOcupado(botao, false);
   }
 }
 
 function salvarPendencia(idTarefa) {
   const motivo  = document.getElementById('pendMotivo').value;
   const detalhe = document.getElementById('pendDetalhe').value.trim();
-  const nome    = lerNomePendencia();
   const erro    = document.getElementById('pendErro');
   if (!motivo) { erro.textContent = '⚠ Escolha o motivo.'; return; }
   if (motivo === 'Outro' && !detalhe) { erro.textContent = '⚠ Para "Outro", descreva o motivo nos detalhes.'; return; }
-  if (!nome) { erro.textContent = '⚠ Selecione seu nome.'; return; }
   const tarefa = rawTaskRows.find(r => String(r['Id da tarefa']) === String(idTarefa)) || {};
-  enviarPendencia({ acao: 'registrar', idTarefa: String(idTarefa), titulo: tarefa['Titulo da tarefa'] || '', motivo, detalhe, nome });
+  const titulo = tarefa['Titulo da tarefa'] || '';
+  enviarPendencia({ acao: 'registrar', idTarefa: String(idTarefa), titulo, motivo, detalhe },
+    'Registrou pendência', `#${idTarefa} ${titulo} · ${motivo}`);
 }
 
 function resolverPendencia(id) {
-  const nome = lerNomePendencia();
-  if (!nome) { document.getElementById('pendErro').textContent = '⚠ Selecione seu nome.'; return; }
-  enviarPendencia({ acao: 'resolver', id, nome });
+  const p = pendencias.find(x => x.id === id) || {};
+  enviarPendencia({ acao: 'resolver', id }, 'Resolveu pendência', `#${p.idTarefa || ''} ${p.titulo || ''} · ${p.motivo || ''}`);
 }
 
 async function fetchData() {
@@ -2499,8 +3127,8 @@ function manualRefresh() {
   });
 }
 
-fetchData();
-scheduleNextRefresh();
+// Os dados só são carregados depois do login (entrarNoDashboard)
+iniciarAcesso();
 
 // ===================== CSC DASHBOARD =====================
 let cscCharts = {};
@@ -2966,6 +3594,7 @@ function exportarRelatorioExcel() {
 
   const nomeArq = `Relatorio_Gerencial_${labelPeriodoAtual().replace(/[^\w]/g,'_')}.xlsx`;
   XLSX.writeFile(wb, nomeArq);
+  registrarLog('acao', 'Exportou relatório gerencial', labelPeriodoAtual());
 }
 </script>
 </body>
