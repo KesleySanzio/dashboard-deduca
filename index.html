@@ -1926,7 +1926,15 @@ function closeOnEsc(e) {
 // ===================== PENDÊNCIAS (Em Andamento) =====================
 // Configuração do app da Web no Firebase (ver firebase/LEIA-ME.md).
 // null = modo de teste: as pendências ficam só neste navegador, para validar a tela.
-const FIREBASE_CONFIG = null;
+// A apiKey não é senha: só identifica o projeto. Quem protege os dados é o firebase/firestore.rules.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBf-NzQYtt0n7UX9jsL1szrbZvMoEZcp-A",
+  authDomain: "dashboard-deduca.firebaseapp.com",
+  projectId: "dashboard-deduca",
+  storageBucket: "dashboard-deduca.firebasestorage.app",
+  messagingSenderId: "144726609989",
+  appId: "1:144726609989:web:cb341378a3865f0882532c",
+};
 const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 
 // Mesma lista do firebase/firestore.rules (motivos aceitos). Se mudar aqui, mude lá.
