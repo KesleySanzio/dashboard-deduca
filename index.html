@@ -899,6 +899,15 @@
   .resumo span:first-child { color: var(--text-muted); }
   .resumo span:last-child { font-weight: 500; font-variant-numeric: tabular-nums; }
 
+  .csc-acoes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .csc-acoes .task-select { min-width: 210px; }
+  .csc-acoes .so-admin-csc { display: none; }
+  body.perfil-admin .csc-acoes .so-admin-csc:not([hidden]) { display: inline-flex; }
+  .csc-retorno { margin: -8px 0 20px; padding: 10px 14px; border-radius: var(--raio); font-size: 13.5px; }
+  .csc-retorno.ok { background: var(--green-soft); color: var(--green); }
+  .csc-retorno.erro { background: var(--red-soft); color: var(--red); }
+  .csc-retorno ul { margin: 6px 0 0 18px; }
+  @media (max-width: 900px) { #page-csc header { flex-wrap: wrap; } .csc-acoes { justify-content: flex-start; } }
   .barra-carregando { height: 2px; background: var(--accent); width: 100%; margin: -12px 0 10px; border-radius: 99px; transition: opacity 0.3s; opacity: 0; }
 
   /* ===================== RESPONSIVO ===================== */
@@ -1234,13 +1243,20 @@
       <header>
         <div class="logo-area">
           <h1>Chamados do CSC</h1>
-          <p>Central de Serviços Compartilhados</p>
+          <p>Central de Serviços Compartilhados · extração mensal pela extensão CSC Extrator</p>
           <div class="linha-status">
-            <span id="cscStatus" class="ponto">Aguardando dados…</span>
-            <span id="cscUpdated"></span>
+            <span id="cscStatus" class="ponto">Carregando…</span>
+            <span id="cscUpdated" class="linha-status-aviso"></span>
           </div>
         </div>
+        <div class="csc-acoes">
+          <select class="task-select" id="cscVersao" onchange="mostrarVersaoCsc(this.value)" aria-label="Escolher a extração" hidden></select>
+          <button type="button" class="btn-mini perigo so-admin-csc" id="cscExcluir" onclick="excluirExtracaoCsc()" hidden>Excluir esta</button>
+          <button type="button" class="btn-primario btn-compacto" data-permissao="csc-enviar" onclick="document.getElementById('cscArquivo').click()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>Enviar extração</button>
+          <input type="file" id="cscArquivo" accept=".json,application/json" hidden onchange="enviarExtracaoCsc(this)">
+        </div>
         </header>
+      <div class="csc-retorno" id="cscRetorno" hidden></div>
 
       <!-- KPIs -->
       <div class="kpi-row">
@@ -1476,6 +1492,8 @@ const ITENS_PERMISSAO = [
   { chave: 'bloco-evolucao', nome: 'Evolução mensal', sub: true },
   { chave: 'aba-em-aberto', nome: 'Em aberto' },
   { chave: 'aba-em-andamento', nome: 'Em andamento' },
+  { grupo: 'Ações' },
+  { chave: 'csc-enviar', nome: 'Enviar extração do CSC' },
 ];
 const TODAS_PERMISSOES = ITENS_PERMISSAO.filter(i => i.chave).map(i => i.chave);
 // Padrão = como era antes (Equipe sem Relatório, CSC e Visão geral)
@@ -3270,15 +3288,121 @@ iniciarAcesso();
 let cscCharts = {};
 let ultimoCsc = null; // últimos dados do CSC, para redesenhar ao trocar o tema
 
+// As extrações ficam na coleção `csc` do Firestore (uma por envio). Enquanto não houver
+// nenhuma, mostra o csc.json antigo do GitHub.
+let cscVersoes = [];   // [{ id, extraidoEm, enviadoPor, enviadoEm, dados }], mais nova primeiro
+let cscMeta = null;    // de onde veio o que está na tela
+
+const CAMPOS_CSC = {
+  extraidoEm: 'string', indicadores: 'objeto', abertosFechados: 'objeto', chamadosStatus: 'lista',
+  chamadosPorDepartamento: 'lista', rankingAtendimento: 'lista', slaMensal: 'lista', mensalAbertosFechados: 'objeto',
+};
+
 async function fetchCscData() {
   try {
-    const url = `https://raw.githubusercontent.com/KesleySanzio/dashboard-deduca/main/csc.json?t=${Date.now()}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    renderCsc(json);
+    const { fs, db } = fb;
+    const snap = await fs.getDocs(fs.query(fs.collection(db, 'csc'), fs.orderBy('extraidoEm', 'desc'), fs.limit(36)));
+    cscVersoes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch(err) {
-    marcarStatus('cscStatus', 'Aguardando a primeira coleta da extensão', 'alerta');
+    console.warn('CSC: não foi possível ler as extrações do Firebase.', err);
+    cscVersoes = [];
+  }
+  const sel = document.getElementById('cscVersao');
+  if (cscVersoes.length) {
+    sel.innerHTML = cscVersoes.map((v, i) => `<option value="${v.id}">${i === 0 ? 'Mais recente · ' : ''}extração de ${new Date(v.extraidoEm).toLocaleDateString('pt-BR')}</option>`).join('');
+    sel.hidden = cscVersoes.length < 2;
+    mostrarVersaoCsc(cscVersoes[0].id);
+    return;
+  }
+  sel.hidden = true;
+  document.getElementById('cscExcluir').hidden = true;
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/KesleySanzio/dashboard-deduca/main/csc.json?t=${Date.now()}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    cscMeta = { fonte: 'github' };
+    renderCsc(await res.json());
+  } catch(err) {
+    cscMeta = null;
+    marcarStatus('cscStatus', 'Nenhuma extração enviada ainda', 'alerta');
+    document.getElementById('cscUpdated').textContent = 'Baixe o JSON pela extensão CSC Extrator e use "Enviar extração".';
+  }
+}
+
+function mostrarVersaoCsc(id) {
+  const v = cscVersoes.find(x => x.id === id);
+  if (!v) return;
+  document.getElementById('cscVersao').value = id;
+  document.getElementById('cscExcluir').hidden = false;
+  cscMeta = { fonte: 'firebase', id: v.id, enviadoPor: v.enviadoPor, enviadoEm: isoFirestore(v.enviadoEm), maisRecente: v.id === cscVersoes[0].id };
+  renderCsc(v.dados);
+}
+
+// Confere o JSON da extensão; devolve a lista de problemas (vazia = ok)
+function validarExtracaoCsc(d) {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return ['O arquivo não é um JSON da extensão CSC Extrator.'];
+  const problemas = [];
+  for (const [campo, tipo] of Object.entries(CAMPOS_CSC)) {
+    const v = d[campo];
+    const ok = tipo === 'lista' ? Array.isArray(v) : tipo === 'objeto' ? (v && typeof v === 'object' && !Array.isArray(v)) : typeof v === 'string';
+    if (!ok) problemas.push(`Falta o campo "${campo}" (ou ele está num formato diferente).`);
+  }
+  if (typeof d.extraidoEm === 'string' && isNaN(new Date(d.extraidoEm))) problemas.push('A data da extração ("extraidoEm") é inválida.');
+  return problemas;
+}
+
+function retornoCsc(tipo, html) {
+  const el = document.getElementById('cscRetorno');
+  el.className = 'csc-retorno ' + tipo;
+  el.innerHTML = html;
+  el.hidden = false;
+}
+
+async function enviarExtracaoCsc(input) {
+  const arquivo = input.files[0];
+  input.value = ''; // permite escolher o mesmo arquivo de novo
+  if (!arquivo) return;
+  if (verComo) { retornoCsc('erro', 'Você está no modo "ver como". Volte ao seu acesso para enviar.'); return; }
+  if (arquivo.size > 300 * 1024) { retornoCsc('erro', 'Arquivo grande demais para uma extração do CSC (mais de 300 KB). Confira se escolheu o arquivo certo.'); return; }
+  let dados;
+  try { dados = JSON.parse(await arquivo.text()); }
+  catch(e) { retornoCsc('erro', `"${esc(arquivo.name)}" não é um JSON válido.`); return; }
+  const problemas = validarExtracaoCsc(dados);
+  if (problemas.length) { retornoCsc('erro', `Não enviei "${esc(arquivo.name)}":<ul>${problemas.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`); return; }
+  if (cscVersoes.some(v => v.extraidoEm === dados.extraidoEm)) {
+    retornoCsc('erro', `Esta extração (de ${new Date(dados.extraidoEm).toLocaleString('pt-BR')}) já foi enviada.`); return;
+  }
+  // Guarda só os campos do painel (a "origem" traz IDs internos do CSC que não usamos)
+  const limpo = Object.fromEntries(Object.keys(CAMPOS_CSC).map(k => [k, dados[k]]));
+  try {
+    const { fs, db } = fb;
+    await fs.addDoc(fs.collection(db, 'csc'), {
+      dados: limpo, extraidoEm: dados.extraidoEm,
+      enviadoEm: fs.serverTimestamp(), enviadoPor: usuarioAtual.nome, enviadoPorUid: usuarioAtual.uid,
+    });
+    registrarLog('acao', 'Enviou extração do CSC', `extração de ${new Date(dados.extraidoEm).toLocaleString('pt-BR')} · ${arquivo.name}`);
+    retornoCsc('ok', `Extração de ${new Date(dados.extraidoEm).toLocaleString('pt-BR')} enviada. Já está valendo para todos.`);
+    await fetchCscData();
+  } catch(err) {
+    console.error(err);
+    retornoCsc('erro', err && err.code === 'permission-denied'
+      ? 'Seu perfil não tem permissão para enviar a extração do CSC. Fale com um admin.'
+      : 'Não foi possível salvar a extração. Tente de novo.');
+  }
+}
+
+async function excluirExtracaoCsc() {
+  if (!cscMeta || cscMeta.fonte !== 'firebase') return;
+  const v = cscVersoes.find(x => x.id === cscMeta.id);
+  if (!v || !confirm(`Excluir a extração de ${new Date(v.extraidoEm).toLocaleString('pt-BR')}? Isso não pode ser desfeito.`)) return;
+  try {
+    const { fs, db } = fb;
+    await fs.deleteDoc(fs.doc(db, 'csc', v.id));
+    registrarLog('acao', 'Excluiu extração do CSC', `extração de ${new Date(v.extraidoEm).toLocaleString('pt-BR')}`);
+    retornoCsc('ok', 'Extração excluída.');
+    await fetchCscData();
+  } catch(err) {
+    console.error(err);
+    retornoCsc('erro', 'Não foi possível excluir a extração.');
   }
 }
 
@@ -3308,9 +3432,14 @@ function renderCsc(d) {
   document.getElementById('csc-sum-fora').textContent      = fmt(fora);
 
   // Status / Updated
-  const dt = d.extraidoEm ? new Date(d.extraidoEm).toLocaleString('pt-BR') : '';
-  marcarStatus('cscStatus', 'Conectado ao CSC', 'ok');
-  document.getElementById('cscUpdated').textContent = dt ? 'Extraído: ' + dt : '';
+  // A extração é mensal: mais de 40 dias sem nova vira alerta
+  const extraido = d.extraidoEm ? new Date(d.extraidoEm) : null;
+  const dias = extraido ? Math.floor((Date.now() - extraido) / 86400000) : null;
+  const velha = dias !== null && dias > 40 && (!cscMeta || cscMeta.fonte !== 'firebase' || cscMeta.maisRecente);
+  marcarStatus('cscStatus', extraido ? `Extração de ${extraido.toLocaleDateString('pt-BR')}${velha ? ` · há ${dias} dias` : ''}` : 'Extração sem data', velha ? 'alerta' : 'ok');
+  document.getElementById('cscUpdated').textContent = !cscMeta ? ''
+    : cscMeta.fonte === 'github' ? 'Arquivo antigo do GitHub. As próximas extrações vão pelo botão "Enviar extração".'
+    : `Enviada por ${cscMeta.enviadoPor} em ${dataHora(cscMeta.enviadoEm)}${velha ? ' · está na hora de uma nova extração' : ''}`;
 
   // Gráficos
   Object.values(cscCharts).forEach(c => c.destroy());

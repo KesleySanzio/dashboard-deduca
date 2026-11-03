@@ -138,6 +138,29 @@ service cloud.firestore {
         && request.resource.data.atualizadoPor == request.auth.uid;
     }
 
+    // ---------- extrações do CSC (enviadas pelo painel, uma por mês) ----------
+    // Quem envia: admin, ou o perfil marcado em "Enviar extração do CSC" nas Permissões
+    // (sem permissões salvas, vale o padrão: Gestão).
+    function configPermissoes() { return /databases/$(database)/documents/config/permissoes; }
+    function podeEnviarCsc() {
+      return admin() || (ativo() && (exists(configPermissoes())
+        ? get(configPermissoes()).data.get(cadastro().perfil, []).hasAny(['csc-enviar'])
+        : cadastro().perfil == 'gestao'));
+    }
+
+    match /csc/{id} {
+      allow read: if temAcesso();
+      allow create: if podeEnviarCsc()
+        && request.resource.data.keys().hasOnly(['dados', 'extraidoEm', 'enviadoEm', 'enviadoPor', 'enviadoPorUid'])
+        && request.resource.data.dados is map
+        && texto(request.resource.data.extraidoEm, 10, 40)
+        && request.resource.data.enviadoEm == request.time
+        && request.resource.data.enviadoPorUid == request.auth.uid
+        && texto(request.resource.data.enviadoPor, 1, 80);
+      allow update: if false;
+      allow delete: if admin();  // para tirar uma extração enviada por engano
+    }
+
     // Qualquer outra coleção fica fechada
     match /{document=**} {
       allow read, write: if false;

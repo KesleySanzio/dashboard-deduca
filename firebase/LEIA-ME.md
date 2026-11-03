@@ -29,6 +29,10 @@ A tabela acima é o padrão. Um admin pode mudar o que Equipe e Gestão veem (p�
    Faça isso **junto** com a publicação do `index.html` novo: as regras novas exigem login, e a versão antiga do site deixa de funcionar.
 4. **Primeiro acesso dos admins principais:** em **Authentication → Usuários → Adicionar usuário**, cada um cria a própria conta (e-mail `@pucminas.br` + uma senha). Depois entra no dashboard, clica em **Enviar link de confirmação**, confirma pelo e-mail e clica em **Já confirmei**.
 
+## Chamados do CSC
+
+Uma vez por mês, alguém baixa o JSON pela extensão **CSC Extrator** (repositório raylanbf/Gestao) e, na página **Chamados do CSC**, clica em **Enviar extração** e escolhe o arquivo. O painel confere os campos e salva na coleção `csc` do Firestore (uma extração por envio, com seletor de mês). Quem pode enviar: admin e o que estiver marcado em **Permissões dos perfis → Enviar extração do CSC** (padrão: Gestão). Só admin exclui uma extração enviada por engano. Enquanto não houver nenhuma no Firestore, a página mostra o `csc.json` antigo do GitHub.
+
 ## Uso no dia a dia
 
 - **Cadastrar alguém:** menu do usuário (canto inferior esquerdo) → **Gerenciar equipe** → nome, e-mail e perfil → **Cadastrar**. Aparece uma **senha provisória** (só uma vez): envie para a pessoa. No primeiro acesso ela cria a própria senha.
