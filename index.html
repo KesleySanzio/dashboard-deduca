@@ -936,7 +936,6 @@
   .btn-icone:hover { background: var(--hover); color: var(--text); }
   .btn-icone[hidden] { display: none; }
   .btn-icone.antigo { color: var(--yellow); border-color: var(--yellow-mark); background: var(--yellow-soft); }
-  #cscMes { min-width: 150px; }
   .hist-lista { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
   .hist-item { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--rule); }
   .hist-item.atual { background: var(--accent-soft); border-radius: 8px; border-bottom-color: transparent; padding: 12px; }
@@ -1309,8 +1308,7 @@
         </div>
         <div class="csc-acoes">
           <button type="button" class="btn-icone" id="cscHistorico" onclick="abrirHistoricoCsc()" title="Envios anteriores" aria-label="Envios anteriores" hidden><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></button>
-          <select class="task-select" id="cscAno" onchange="mudouAnoCsc()" aria-label="Período" hidden></select>
-          <select class="task-select" id="cscMes" onchange="renderPeriodoCsc()" aria-label="Mês" hidden></select>
+          <select class="task-select" id="cscAno" onchange="renderPeriodoCsc()" aria-label="Período" hidden></select>
           <button type="button" class="btn-primario btn-compacto" data-permissao="csc-enviar" onclick="document.getElementById('cscArquivo').click()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>Enviar extração</button>
           <input type="file" id="cscArquivo" accept=".csv,text/csv,.json,application/json" hidden onchange="enviarExtracaoCsc(this)">
         </div>
@@ -3430,7 +3428,6 @@ async function fetchCscData() {
   historico.hidden = true;
   cscChamados = null;
   document.getElementById('cscAno').hidden = true;
-  document.getElementById('cscMes').hidden = true;
   try {
     const res = await fetch(`https://raw.githubusercontent.com/KesleySanzio/dashboard-deduca/main/csc.json?t=${Date.now()}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -3584,27 +3581,9 @@ function agregarChamadosCsc(todos, periodo) {
 let cscChamados = null;          // chamados expandidos do envio em tela (formato CSV)
 const cscPessoasAbertas = new Set();
 
-// Ao escolher um ano, aparece o seletor de mês daquele ano ("Ano inteiro" por padrão)
-function mudouAnoCsc() {
-  const ano = document.getElementById('cscAno').value || 'tudo';
-  const selMes = document.getElementById('cscMes');
-  if (ano === 'tudo' || !cscChamados) {
-    selMes.hidden = true;
-    selMes.innerHTML = '';
-  } else {
-    const doAno = cscChamados.filter(c => c.abertura && String(c.abertura.getFullYear()) === ano);
-    const meses = [...new Set(doAno.map(c => chaveMes(c.abertura)))].sort();
-    selMes.innerHTML = '<option value="">Ano inteiro</option>' + meses.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]} · ${fmt(doAno.filter(c => chaveMes(c.abertura) === k).length)}</option>`).join('');
-    selMes.hidden = false;
-  }
-  renderPeriodoCsc();
-}
-
 function renderPeriodoCsc() {
   if (!cscChamados) return;
-  const ano = document.getElementById('cscAno').value || 'tudo';
-  const mes = document.getElementById('cscMes').value;
-  renderCsc(agregarChamadosCsc(cscChamados, ano === 'tudo' ? 'tudo' : mes || 'ano-' + ano));
+  renderCsc(agregarChamadosCsc(cscChamados, document.getElementById('cscAno').value || 'tudo'));
 }
 
 // ---- Histórico de envios (relógio): escolher outro envio para ver ----
@@ -3648,22 +3627,30 @@ function mostrarVersaoCsc(id) {
   const selAno = document.getElementById('cscAno');
   if (v.dados && v.dados.formato === 'chamados-v1') {
     cscChamados = expandirChamadosCsc(v.dados);
-    // Período: "Todo o período" e cada ano, com as datas que ele cobre neste envio
+    // Período: meses do ano mais recente (o padrão é o mês mais recente), os anos anteriores e todo o período
     const anos = [...new Set(cscChamados.filter(c => c.abertura).map(c => c.abertura.getFullYear()))].sort((a, b) => b - a);
     const qtdAno = a => cscChamados.filter(c => c.abertura && c.abertura.getFullYear() === a).length;
     const faixaAno = a => {
       const ini = v.dados.periodoIni > `${a}-01-01` ? v.dados.periodoIni : `${a}-01-01`;
       const fim = v.dados.periodoFim < `${a}-12-31` ? v.dados.periodoFim : `${a}-12-31`;
-      return `${fmtDia(ini)} a ${fmtDia(fim)}${fim < `${a}-12-31` ? ', parcial' : ''}`;
+      return `${fmtDia(ini)} a ${fmtDia(fim)}`;
     };
-    selAno.innerHTML = `<option value="tudo">Todo o período (${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)})</option>`
-      + (anos.length > 1 || v.dados.periodoIni.slice(0, 4) !== v.dados.periodoFim.slice(0, 4) ? anos.map(a => `<option value="${a}">${a} (${faixaAno(a)}) · ${fmt(qtdAno(a))} chamados</option>`).join('') : '');
+    const anoAtual = anos[0];
+    const mesesAtual = [...new Set(cscChamados.filter(c => c.abertura && c.abertura.getFullYear() === anoAtual).map(c => chaveMes(c.abertura)))].sort().reverse();
+    const qtdMes = k => cscChamados.filter(c => c.abertura && chaveMes(c.abertura) === k).length;
+    selAno.innerHTML =
+      `<optgroup label="${anoAtual}">`
+        + mesesAtual.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]} de ${anoAtual} · ${fmt(qtdMes(k))} chamados</option>`).join('')
+        + `<option value="ano-${anoAtual}">${anoAtual} até agora (${faixaAno(anoAtual)}) · ${fmt(qtdAno(anoAtual))} chamados</option>`
+      + '</optgroup>'
+      + (anos.length > 1 ? `<optgroup label="Anos anteriores">${anos.slice(1).map(a => `<option value="ano-${a}">${a} (${faixaAno(a)}) · ${fmt(qtdAno(a))} chamados</option>`).join('')}</optgroup>` : '')
+      + `<optgroup label="Tudo"><option value="tudo">Todo o período (${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)}) · ${fmt(cscChamados.length)} chamados</option></optgroup>`;
+    selAno.value = mesesAtual[0] || 'tudo';
     selAno.hidden = false;
-    mudouAnoCsc();
+    renderPeriodoCsc();
   } else {
     cscChamados = null;
     selAno.hidden = true;
-    document.getElementById('cscMes').hidden = true;
     renderCsc(v.dados);
   }
 }
