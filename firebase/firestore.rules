@@ -124,6 +124,24 @@ service cloud.firestore {
         && request.resource.data.resolvidoPorUid == request.auth.uid
         && request.resource.data.resolvidoEm == request.time;
 
+      // Editar motivo e detalhes enquanto está aberta: quem registrou, Gestão ou Admin
+      allow update: if temAcesso()
+        && resource.data.status == 'aberta'
+        && (resource.data.registradoPorUid == request.auth.uid || admin() || (ativo() && cadastro().perfil == 'gestao'))
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['motivo', 'detalhe', 'editadoPor', 'editadoPorUid', 'editadoEm'])
+        && request.resource.data.motivo in [
+             'Aguardando professor/conteudista',
+             'Aguardando outro setor',
+             'Problema técnico / sistema',
+             'Aguardando aprovação da gestão',
+             'Outro']
+        && texto(request.resource.data.detalhe, 0, 500)
+        && (request.resource.data.motivo != 'Outro' || request.resource.data.detalhe.size() > 0)
+        && texto(request.resource.data.editadoPor, 1, 80)
+        && request.resource.data.editadoPorUid == request.auth.uid
+        && request.resource.data.editadoEm == request.time;
+
       allow delete: if false;
     }
 

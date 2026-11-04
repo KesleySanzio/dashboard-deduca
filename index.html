@@ -593,6 +593,9 @@
     transition: opacity 0.12s;
   }
   .pend-salvar:hover { opacity: 0.88; }
+  .pend-botoes { display: flex; gap: 8px; }
+  .pend-botoes .pend-salvar { flex: 1; }
+  .pend-botoes .btn-secundario { height: 40px; }
   .pend-salvar.resolver { background: var(--green); border-color: var(--green); color: #fff; }
   .pend-salvar:disabled { opacity: 0.6; cursor: wait; }
   .pend-info { background: var(--yellow-soft); border-radius: var(--raio); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
@@ -2787,6 +2790,11 @@ async function chamarPendencias(corpo) {
       await fs.updateDoc(fs.doc(db, 'pendencias', corpo.id), {
         status: 'resolvida', resolvidoPor: u.nome, resolvidoPorUid: u.uid, resolvidoEm: fs.serverTimestamp(),
       });
+    } else if (corpo.acao === 'editar') {
+      await fs.updateDoc(fs.doc(db, 'pendencias', corpo.id), {
+        motivo: corpo.motivo, detalhe: corpo.detalhe,
+        editadoPor: u.nome, editadoPorUid: u.uid, editadoEm: fs.serverTimestamp(),
+      });
     }
   } catch(err) {
     // As regras do Firestore recusam dados fora do padrão (ex.: pendência já resolvida)
@@ -2801,7 +2809,7 @@ async function assinarPendencias() {
   fs.onSnapshot(fs.collection(db, 'pendencias'), snap => {
     pendencias = snap.docs.map(d => {
       const x = d.data({ serverTimestamps: 'estimate' });
-      return { ...x, id: d.id, registradoEm: isoFirestore(x.registradoEm), resolvidoEm: isoFirestore(x.resolvidoEm) };
+      return { ...x, id: d.id, registradoEm: isoFirestore(x.registradoEm), resolvidoEm: isoFirestore(x.resolvidoEm), editadoEm: isoFirestore(x.editadoEm) };
     });
     pendenciasErro = false;
     atualizarPendenciasNaTela();
@@ -2852,10 +2860,14 @@ function abrirPendencia(idTarefa) {
       <div class="pend-info-motivo">${esc(aberta.motivo)}</div>
       ${aberta.detalhe ? `<div class="pend-info-detalhe">${esc(aberta.detalhe)}</div>` : ''}
       <div class="pend-info-meta">Registrada por ${esc(aberta.registradoPor)} em ${dataHora(aberta.registradoEm)} · ${tempoTag(daysSince(aberta.registradoEm), '').texto}</div>
+      ${aberta.editadoPor ? `<div class="pend-info-meta">Editada por ${esc(aberta.editadoPor)} em ${dataHora(aberta.editadoEm)}</div>` : ''}
     </div>
     <div class="pend-form" style="margin-top:16px">
       <div class="pend-erro" id="pendErro"></div>
-      <button class="pend-salvar resolver" id="pendBotao" onclick="resolverPendencia('${esc(aberta.id)}')">Pendência resolvida</button>
+      <div class="pend-botoes">
+        ${podeEditarPendencia(aberta) ? `<button class="btn-secundario" type="button" onclick="editarPendencia('${esc(aberta.id)}')">Editar</button>` : ''}
+        <button class="pend-salvar resolver" id="pendBotao" onclick="resolverPendencia('${esc(aberta.id)}')">Pendência resolvida</button>
+      </div>
       <div class="nota">Fica registrado em nome de ${esc((verComo || usuarioAtual).nome)}</div>
     </div>` : `
     <div class="pend-form">
@@ -2924,6 +2936,50 @@ function salvarPendencia(idTarefa) {
   const titulo = tarefa['Titulo da tarefa'] || '';
   enviarPendencia({ acao: 'registrar', idTarefa: String(idTarefa), titulo, motivo, detalhe },
     'Registrou pendência', `#${idTarefa} ${titulo} · ${motivo}`);
+}
+
+// Quem registrou a pendência, Gestão e Admin podem editar motivo e detalhes enquanto ela está aberta
+function podeEditarPendencia(p) {
+  if (!usuarioAtual || !p) return false;
+  return p.registradoPorUid === usuarioAtual.uid || usuarioAtual.perfil === 'admin' || usuarioAtual.perfil === 'gestao';
+}
+
+// Troca o quadro da pendência pelo formulário já preenchido
+function editarPendencia(id) {
+  const p = pendencias.find(x => x.id === id);
+  const caixa = document.querySelector('#taskModal .pend-info');
+  if (!p || !caixa) return;
+  caixa.parentElement.querySelector('.pend-form').remove();
+  caixa.outerHTML = `
+    <div class="pend-form">
+      <label>Motivo
+        <select class="task-select" id="pendMotivo">
+          ${MOTIVOS_PENDENCIA.map(m => `<option value="${esc(m)}"${m === p.motivo ? ' selected' : ''}>${esc(m)}</option>`).join('')}
+        </select>
+      </label>
+      <label>Detalhes <span style="font-weight:400;color:var(--text-dim)">(obrigatório para "Outro")</span>
+        <textarea id="pendDetalhe" maxlength="500">${esc(p.detalhe || '')}</textarea>
+      </label>
+      <div class="pend-erro" id="pendErro"></div>
+      <div class="pend-botoes">
+        <button class="btn-secundario" type="button" onclick="abrirPendencia('${esc(p.idTarefa)}')">Cancelar</button>
+        <button class="pend-salvar" id="pendBotao" onclick="salvarEdicaoPendencia('${esc(p.id)}')">Salvar alterações</button>
+      </div>
+      <div class="nota">A edição fica registrada em nome de ${esc((verComo || usuarioAtual).nome)}</div>
+    </div>`;
+  document.getElementById('pendDetalhe').focus();
+}
+
+function salvarEdicaoPendencia(id) {
+  const p = pendencias.find(x => x.id === id) || {};
+  const motivo  = document.getElementById('pendMotivo').value;
+  const detalhe = document.getElementById('pendDetalhe').value.trim();
+  const erro    = document.getElementById('pendErro');
+  if (!motivo) { erro.textContent = '⚠ Escolha o motivo.'; return; }
+  if (motivo === 'Outro' && !detalhe) { erro.textContent = '⚠ Para "Outro", descreva o motivo nos detalhes.'; return; }
+  if (motivo === p.motivo && detalhe === (p.detalhe || '')) { abrirPendencia(p.idTarefa); return; }
+  const mudou = [motivo !== p.motivo ? `motivo: ${p.motivo} → ${motivo}` : '', detalhe !== (p.detalhe || '') ? 'detalhes' : ''].filter(Boolean).join(', ');
+  enviarPendencia({ acao: 'editar', id, motivo, detalhe }, 'Editou pendência', `#${p.idTarefa || ''} ${p.titulo || ''} · ${mudou}`.slice(0, 300));
 }
 
 function resolverPendencia(id) {
