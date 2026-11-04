@@ -899,6 +899,14 @@
   .resumo span:first-child { color: var(--text-muted); }
   .resumo span:last-child { font-weight: 500; font-variant-numeric: tabular-nums; }
 
+  .rank-item.clicavel { cursor: pointer; border-radius: 8px; }
+  .rank-item.clicavel:hover, .rank-item.aberta { background: var(--hover); }
+  .rank-item.aberta { border-bottom-color: transparent; }
+  .csc-chamados { list-style: none; display: flex; flex-direction: column; gap: 6px; padding: 0 4px 12px 34px; max-height: 380px; overflow-y: auto; border-bottom: 1px solid var(--rule); }
+  .csc-chamado { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+  .csc-chamado-topo { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-weight: 500; }
+  .csc-chamado-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .csc-chamado .fora { color: var(--red); font-weight: 600; }
   .csc-acoes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
   .csc-acoes .task-select { min-width: 210px; }
   .csc-acoes .so-admin-csc { display: none; }
@@ -1243,17 +1251,18 @@
       <header>
         <div class="logo-area">
           <h1>Chamados do CSC</h1>
-          <p>Central de Serviços Compartilhados · extração mensal pela extensão CSC Extrator</p>
+          <p>Central de Serviços Compartilhados · chamados da Gestão do AVA</p>
           <div class="linha-status">
             <span id="cscStatus" class="ponto">Carregando…</span>
             <span id="cscUpdated" class="linha-status-aviso"></span>
           </div>
         </div>
         <div class="csc-acoes">
-          <select class="task-select" id="cscVersao" onchange="mostrarVersaoCsc(this.value)" aria-label="Escolher a extração" hidden></select>
+          <select class="task-select" id="cscPeriodo" onchange="renderPeriodoCsc()" aria-label="Período" hidden></select>
+          <select class="task-select" id="cscVersao" onchange="mostrarVersaoCsc(this.value)" aria-label="Escolher o envio" hidden></select>
           <button type="button" class="btn-mini perigo so-admin-csc" id="cscExcluir" onclick="excluirExtracaoCsc()" hidden>Excluir esta</button>
           <button type="button" class="btn-primario btn-compacto" data-permissao="csc-enviar" onclick="document.getElementById('cscArquivo').click()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>Enviar extração</button>
-          <input type="file" id="cscArquivo" accept=".json,application/json" hidden onchange="enviarExtracaoCsc(this)">
+          <input type="file" id="cscArquivo" accept=".csv,text/csv,.json,application/json" hidden onchange="enviarExtracaoCsc(this)">
         </div>
         </header>
       <div class="csc-retorno" id="cscRetorno" hidden></div>
@@ -1278,14 +1287,14 @@
         <div class="kpi-card purple">
           <div class="kpi-label">Tempo médio</div>
           <div class="kpi-value" id="csc-tempo">—</div>
-          <div class="kpi-sub">de atendimento</div>
+          <div class="kpi-sub" id="csc-tempo-sub">de atendimento</div>
         </div>
       </div>
 
       <!-- SLA + Abertos x Fechados -->
       <div class="grid-2" style="margin-bottom:16px">
         <div class="card">
-          <div class="card-title">SLA mensal <span>· % cumprido; abaixo de 90% em vermelho</span></div>
+          <div class="card-title">SLA mensal <span id="cscSlaSub">· % cumprido; abaixo de 90% em vermelho</span></div>
           <div class="chart-wrap" style="height:220px">
             <canvas id="cscChartSla"></canvas>
           </div>
@@ -1301,11 +1310,11 @@
       <!-- Ranking + Departamentos -->
       <div class="grid-2" style="margin-bottom:16px">
         <div class="card">
-          <div class="card-title">Atendimentos por pessoa</div>
+          <div class="card-title">Atendimentos por pessoa <span id="cscRankingSub"></span></div>
           <div id="cscRanking" class="rank-list"></div>
         </div>
         <div class="card">
-          <div class="card-title">Chamados por departamento</div>
+          <div class="card-title" id="cscTituloDept">Chamados por departamento</div>
           <div id="cscDepartamentos"></div>
         </div>
       </div>
@@ -1322,7 +1331,7 @@
           <div class="card-title" style="margin-bottom:0">Satisfação do cliente</div>
           <div>
             <div id="cscSatisfacao" class="kpi-destaque">—</div>
-            <div style="font-size:13px;color:var(--text-muted)">índice de satisfação</div>
+            <div style="font-size:13px;color:var(--text-muted)" id="cscSatisfacaoSub">índice de satisfação</div>
           </div>
           <div class="resumo">
             <div><span>Chamados abertos</span><span id="csc-sum-abertos">—</span></div>
@@ -1332,7 +1341,7 @@
         </div>
       </div>
 
-      <footer>Dados coletados do CSC pela extensão CSC Extrator · Gestão do AVA · CEAD</footer>
+      <footer>Dados do CSC (relatório Analítico resumido, grupos da Gestão do AVA) · Gestão do AVA · CEAD</footer>
     </div>
   </div>
 
@@ -3310,12 +3319,14 @@ async function fetchCscData() {
   }
   const sel = document.getElementById('cscVersao');
   if (cscVersoes.length) {
-    sel.innerHTML = cscVersoes.map((v, i) => `<option value="${v.id}">${i === 0 ? 'Mais recente · ' : ''}extração de ${new Date(v.extraidoEm).toLocaleDateString('pt-BR')}</option>`).join('');
+    sel.innerHTML = cscVersoes.map((v, i) => `<option value="${v.id}">${i === 0 ? 'Mais recente · ' : ''}${v.dados && v.dados.formato === 'chamados-v1' ? `chamados até ${fmtDia(v.dados.periodoFim)}` : `extração de ${new Date(v.extraidoEm).toLocaleDateString('pt-BR')}`}</option>`).join('');
     sel.hidden = cscVersoes.length < 2;
     mostrarVersaoCsc(cscVersoes[0].id);
     return;
   }
   sel.hidden = true;
+  cscChamados = null;
+  document.getElementById('cscPeriodo').hidden = true;
   document.getElementById('cscExcluir').hidden = true;
   try {
     const res = await fetch(`https://raw.githubusercontent.com/KesleySanzio/dashboard-deduca/main/csc.json?t=${Date.now()}`);
@@ -3329,13 +3340,171 @@ async function fetchCscData() {
   }
 }
 
+// ---- CSV do relatório "Analítico resumido" (um chamado por linha) ----
+// Colunas do relatório (nomes técnicos do exportador do CSC). Descrição e solicitante ficam de fora.
+const COLUNAS_CSV_CSC = {
+  codigo: 'tEXTO1DataTextBox', resp: 'tEXTO4DataTextBox', status: 'tEXTO5DataTextBox',
+  servico: 'tEXTO7DataTextBox', abertura: 'tEXTO9DataTextBox', conclusao: 'textBox3', sla: 'txtSlaConclusao',
+};
+const STATUS_CONCLUIDOS = ['FECHADO', 'RESOLVIDO', 'ARQUIVADO'];
+
+function lerCsv(t) {
+  const linhas = []; let campo = '', linha = [], aspas = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (aspas) {
+      if (c === '"') { if (t[i + 1] === '"') { campo += '"'; i++; } else aspas = false; }
+      else campo += c;
+    } else if (c === '"') aspas = true;
+    else if (c === ',') { linha.push(campo); campo = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && t[i + 1] === '\n') i++;
+      linha.push(campo); linhas.push(linha); linha = []; campo = '';
+    } else campo += c;
+  }
+  if (campo || linha.length) { linha.push(campo); linhas.push(linha); }
+  return linhas.filter(l => l.some(x => x !== ''));
+}
+
+// "05/01/2026 11:53:39" → minutos desde 1970 (hora local); vazio → -1
+function minutosCsc(s) {
+  const m = String(s || '').match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+  return m ? Math.round(new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]).getTime() / 60000) : -1;
+}
+const dataDeMin = m => new Date(m * 60000);
+const isoDia = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Lê o CSV e devolve { dados (compacto, para o Firestore), problemas }
+function lerCsvCsc(texto) {
+  const linhas = lerCsv(texto.replace(/^\uFEFF/, ''));
+  if (linhas.length < 2) return { problemas: ['O CSV está vazio.'] };
+  const cab = linhas[0];
+  const idx = {};
+  const faltam = [];
+  for (const [nome, coluna] of Object.entries(COLUNAS_CSV_CSC)) {
+    idx[nome] = cab.indexOf(coluna);
+    if (idx[nome] < 0) faltam.push(nome);
+  }
+  if (faltam.length) return { problemas: ['Este CSV não é do relatório "Analítico resumido" do CSC (faltam: ' + faltam.join(', ') + ').'] };
+  const filtro = (linhas[1][cab.indexOf('textBox2')] || '').match(/(\d{2}\/\d{2}\/\d{4})\s*a\s*(\d{2}\/\d{2}\/\d{4})/);
+  const pessoas = [], servicos = [], status = [];
+  const indice = (lista, v) => { let i = lista.indexOf(v); if (i < 0) { lista.push(v); i = lista.length - 1; } return i; };
+  const col = { codigo: [], resp: [], status: [], servico: [], abertura: [], conclusao: [], sla: [] };
+  const vistos = new Set();
+  for (const l of linhas.slice(1)) {
+    const codigo = String(l[idx.codigo] || '').trim();
+    if (!codigo || vistos.has(codigo)) continue; // linhas repetidas pela paginação do relatório
+    vistos.add(codigo);
+    col.codigo.push(codigo);
+    col.resp.push(indice(pessoas, String(l[idx.resp] || '').trim() || 'Sem responsável'));
+    col.status.push(indice(status, String(l[idx.status] || '').trim().toUpperCase() || 'SEM STATUS'));
+    col.servico.push(indice(servicos, String(l[idx.servico] || '').trim() || 'Sem serviço'));
+    col.abertura.push(minutosCsc(l[idx.abertura]));
+    col.conclusao.push(minutosCsc(l[idx.conclusao]));
+    const sla = parseFloat(String(l[idx.sla] || '').replace('%', '').replace(',', '.'));
+    col.sla.push(Number.isFinite(sla) ? Math.round(sla) : -1);
+  }
+  if (!col.codigo.length) return { problemas: ['Nenhum chamado encontrado no CSV.'] };
+  const aberturas = col.abertura.filter(m => m >= 0);
+  const ini = filtro ? filtro[1].split('/').reverse().join('-') : isoDia(dataDeMin(Math.min(...aberturas)));
+  const fim = filtro ? filtro[2].split('/').reverse().join('-') : isoDia(dataDeMin(Math.max(...aberturas)));
+  // Listas viram texto separado por vírgula: cabe folgado num documento do Firestore
+  const dados = { formato: 'chamados-v1', periodoIni: ini, periodoFim: fim, total: col.codigo.length, pessoas, servicos, status, col: {} };
+  for (const [k, v] of Object.entries(col)) dados.col[k] = v.join(',');
+  return { dados, problemas: [] };
+}
+
+function expandirChamadosCsc(dados) {
+  const c = Object.fromEntries(Object.entries(dados.col).map(([k, v]) => [k, String(v).split(',')]));
+  return c.codigo.map((codigo, i) => ({
+    codigo,
+    resp: dados.pessoas[+c.resp[i]],
+    status: dados.status[+c.status[i]],
+    servico: dados.servicos[+c.servico[i]],
+    abertura: +c.abertura[i] >= 0 ? dataDeMin(+c.abertura[i]) : null,
+    conclusao: +c.conclusao[i] >= 0 ? dataDeMin(+c.conclusao[i]) : null,
+    sla: +c.sla[i],
+  }));
+}
+
+const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const MESES_LONGOS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const chaveMes = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+const fmtDia = iso => iso.split('-').reverse().join('/');
+const servicoCurto = s => s.split('/').slice(-2).join(' / ');
+
+// Monta, para o período escolhido, os mesmos números que a tela já desenha
+function agregarChamadosCsc(todos, periodo) {
+  const doPeriodo = periodo === 'tudo' ? todos : todos.filter(c => c.abertura && chaveMes(c.abertura) === periodo);
+  const concluido = c => STATUS_CONCLUIDOS.includes(c.status);
+  const emAberto = c => !concluido(c) && c.status !== 'CANCELADO';
+  const conta = (lista, chave) => {
+    const m = {}; lista.forEach(c => { m[chave(c)] = (m[chave(c)] || 0) + 1; });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  };
+  const fechados = doPeriodo.filter(concluido);
+  const abertos = doPeriodo.filter(emAberto);
+  const horas = fechados.filter(c => c.abertura && c.conclusao).map(c => (c.conclusao - c.abertura) / 3600000);
+  const mediaH = horas.length ? horas.reduce((s, x) => s + x, 0) / horas.length : null;
+  // Séries mensais: sempre o arquivo inteiro, para dar contexto
+  const meses = [...new Set(todos.filter(c => c.abertura).map(c => chaveMes(c.abertura)))].sort();
+  const rotulo = k => MESES_CURTOS[+k.slice(5) - 1] + (new Set(meses.map(m => m.slice(0, 4))).size > 1 ? '/' + k.slice(2, 4) : '');
+  const comSla = todos.filter(c => c.abertura && c.sla >= 0 && c.status !== 'CANCELADO');
+  const porPessoa = {};
+  doPeriodo.forEach(c => { (porPessoa[c.resp] = porPessoa[c.resp] || []).push(c); });
+  return {
+    extraidoEm: null,
+    indicadores: {
+      tempoMedioAtendimentoHHMM: mediaH == null ? '—' : mediaH >= 48 ? (mediaH / 24).toFixed(1).replace('.', ',') + ' dias' : Math.round(mediaH) + ' h',
+      satisfacaoCliente: null,
+      chamadosAbertosForaPrazo: abertos.filter(c => c.sla > 100).length,
+    },
+    abertosFechados: { total: doPeriodo.length, fechados: fechados.length, abertos: abertos.length },
+    chamadosStatus: conta(doPeriodo, c => c.status).map(([nome, quantidade]) => ({ nome: nome.charAt(0) + nome.slice(1).toLowerCase(), quantidade })),
+    chamadosPorDepartamento: conta(doPeriodo, c => servicoCurto(c.servico)).slice(0, 8).map(([area, quantidade]) => ({ area, quantidade })),
+    rankingAtendimento: conta(doPeriodo, c => c.resp).map(([nome, quantidade]) => ({ nome, quantidade })),
+    slaMensal: meses.map(k => {
+      const doMes = comSla.filter(c => chaveMes(c.abertura) === k);
+      return { mes: rotulo(k), valor: doMes.length ? doMes.filter(c => c.sla <= 100).length / doMes.length * 100 : 0 };
+    }),
+    mensalAbertosFechados: {
+      abertos: meses.map(k => ({ mes: rotulo(k), valor: todos.filter(c => c.abertura && chaveMes(c.abertura) === k).length })),
+      fechados: meses.map(k => ({ mes: rotulo(k), valor: todos.filter(c => concluido(c) && c.conclusao && chaveMes(c.conclusao) === k).length })),
+    },
+    _porPessoa: porPessoa,
+    _slaPeriodo: (() => { const s = doPeriodo.filter(c => c.sla >= 0 && c.status !== 'CANCELADO'); return s.length ? s.filter(c => c.sla <= 100).length / s.length * 100 : null; })(),
+  };
+}
+
+let cscChamados = null;          // chamados expandidos do envio em tela (formato CSV)
+const cscPessoasAbertas = new Set();
+
+function renderPeriodoCsc() {
+  if (!cscChamados) return;
+  const periodo = document.getElementById('cscPeriodo').value || 'tudo';
+  renderCsc(agregarChamadosCsc(cscChamados, periodo));
+}
+
 function mostrarVersaoCsc(id) {
   const v = cscVersoes.find(x => x.id === id);
   if (!v) return;
   document.getElementById('cscVersao').value = id;
   document.getElementById('cscExcluir').hidden = false;
-  cscMeta = { fonte: 'firebase', id: v.id, enviadoPor: v.enviadoPor, enviadoEm: isoFirestore(v.enviadoEm), maisRecente: v.id === cscVersoes[0].id };
-  renderCsc(v.dados);
+  cscMeta = { fonte: 'firebase', id: v.id, enviadoPor: v.enviadoPor, enviadoEm: isoFirestore(v.enviadoEm), maisRecente: v.id === cscVersoes[0].id, dados: v.dados };
+  const selPeriodo = document.getElementById('cscPeriodo');
+  if (v.dados && v.dados.formato === 'chamados-v1') {
+    cscChamados = expandirChamadosCsc(v.dados);
+    const meses = [...new Set(cscChamados.filter(c => c.abertura).map(c => chaveMes(c.abertura)))].sort().reverse();
+    const qtd = k => cscChamados.filter(c => c.abertura && chaveMes(c.abertura) === k).length;
+    selPeriodo.innerHTML = `<option value="tudo">Período todo (${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)})</option>`
+      + meses.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]}/${k.slice(0, 4)} · ${qtd(k)} chamados</option>`).join('');
+    selPeriodo.hidden = false;
+    renderPeriodoCsc();
+  } else {
+    cscChamados = null;
+    selPeriodo.hidden = true;
+    renderCsc(v.dados);
+  }
 }
 
 // Confere o JSON da extensão; devolve a lista de problemas (vazia = ok)
@@ -3363,25 +3532,41 @@ async function enviarExtracaoCsc(input) {
   input.value = ''; // permite escolher o mesmo arquivo de novo
   if (!arquivo) return;
   if (verComo) { retornoCsc('erro', 'Você está no modo "ver como". Volte ao seu acesso para enviar.'); return; }
-  if (arquivo.size > 300 * 1024) { retornoCsc('erro', 'Arquivo grande demais para uma extração do CSC (mais de 300 KB). Confira se escolheu o arquivo certo.'); return; }
-  let dados;
-  try { dados = JSON.parse(await arquivo.text()); }
-  catch(e) { retornoCsc('erro', `"${esc(arquivo.name)}" não é um JSON válido.`); return; }
-  const problemas = validarExtracaoCsc(dados);
-  if (problemas.length) { retornoCsc('erro', `Não enviei "${esc(arquivo.name)}":<ul>${problemas.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`); return; }
-  if (cscVersoes.some(v => v.extraidoEm === dados.extraidoEm)) {
-    retornoCsc('erro', `Esta extração (de ${new Date(dados.extraidoEm).toLocaleString('pt-BR')}) já foi enviada.`); return;
+  const ehCsv = /\.csv$/i.test(arquivo.name);
+  if (arquivo.size > (ehCsv ? 30 * 1024 * 1024 : 300 * 1024)) { retornoCsc('erro', 'Arquivo grande demais. Confira se escolheu o arquivo certo.'); return; }
+  let limpo, extraidoEm, descricao;
+  if (ehCsv) {
+    // Relatório "Analítico resumido": guarda só código, responsável, status, serviço, datas e SLA
+    const lido = lerCsvCsc(await arquivo.text());
+    if (lido.problemas.length) { retornoCsc('erro', `Não enviei "${esc(arquivo.name)}":<ul>${lido.problemas.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`); return; }
+    limpo = lido.dados;
+    if (JSON.stringify(limpo).length > 900 * 1024) { retornoCsc('erro', 'Chamados demais para um envio só. Exporte um período menor (por exemplo, um ano).'); return; }
+    const repetido = cscVersoes.find(v => v.dados && v.dados.formato === 'chamados-v1' && v.dados.periodoIni === limpo.periodoIni && v.dados.periodoFim === limpo.periodoFim && v.dados.total === limpo.total);
+    if (repetido) { retornoCsc('erro', 'Estes chamados (mesmo período e mesma quantidade) já foram enviados.'); return; }
+    extraidoEm = new Date().toISOString();
+    descricao = `${limpo.total} chamados de ${fmtDia(limpo.periodoIni)} a ${fmtDia(limpo.periodoFim)}`;
+  } else {
+    let dados;
+    try { dados = JSON.parse(await arquivo.text()); }
+    catch(e) { retornoCsc('erro', `"${esc(arquivo.name)}" não é um JSON válido.`); return; }
+    const problemas = validarExtracaoCsc(dados);
+    if (problemas.length) { retornoCsc('erro', `Não enviei "${esc(arquivo.name)}":<ul>${problemas.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`); return; }
+    if (cscVersoes.some(v => v.extraidoEm === dados.extraidoEm)) {
+      retornoCsc('erro', `Esta extração (de ${new Date(dados.extraidoEm).toLocaleString('pt-BR')}) já foi enviada.`); return;
+    }
+    // Guarda só os campos do painel (a "origem" traz IDs internos do CSC que não usamos)
+    limpo = Object.fromEntries(Object.keys(CAMPOS_CSC).map(k => [k, dados[k]]));
+    extraidoEm = dados.extraidoEm;
+    descricao = `extração de ${new Date(dados.extraidoEm).toLocaleString('pt-BR')}`;
   }
-  // Guarda só os campos do painel (a "origem" traz IDs internos do CSC que não usamos)
-  const limpo = Object.fromEntries(Object.keys(CAMPOS_CSC).map(k => [k, dados[k]]));
   try {
     const { fs, db } = fb;
     await fs.addDoc(fs.collection(db, 'csc'), {
-      dados: limpo, extraidoEm: dados.extraidoEm,
+      dados: limpo, extraidoEm,
       enviadoEm: fs.serverTimestamp(), enviadoPor: usuarioAtual.nome, enviadoPorUid: usuarioAtual.uid,
     });
-    registrarLog('acao', 'Enviou extração do CSC', `extração de ${new Date(dados.extraidoEm).toLocaleString('pt-BR')} · ${arquivo.name}`);
-    retornoCsc('ok', `Extração de ${new Date(dados.extraidoEm).toLocaleString('pt-BR')} enviada. Já está valendo para todos.`);
+    registrarLog('acao', 'Enviou extração do CSC', `${descricao} · ${arquivo.name}`);
+    retornoCsc('ok', `Enviado: ${descricao}. Já está valendo para todos.`);
     await fetchCscData();
   } catch(err) {
     console.error(err);
@@ -3394,7 +3579,7 @@ async function enviarExtracaoCsc(input) {
 async function excluirExtracaoCsc() {
   if (!cscMeta || cscMeta.fonte !== 'firebase') return;
   const v = cscVersoes.find(x => x.id === cscMeta.id);
-  if (!v || !confirm(`Excluir a extração de ${new Date(v.extraidoEm).toLocaleString('pt-BR')}? Isso não pode ser desfeito.`)) return;
+  if (!v || !confirm(`Excluir este envio do CSC (de ${new Date(v.extraidoEm).toLocaleString('pt-BR')})? Isso não pode ser desfeito.`)) return;
   try {
     const { fs, db } = fb;
     await fs.deleteDoc(fs.doc(db, 'csc', v.id));
@@ -3417,7 +3602,7 @@ function renderCsc(d) {
   const fech   = ab.fechados || 0;
   const aberto = ab.abertos || 0;
   const fora   = ind.chamadosAbertosForaPrazo || 0;
-  const pct    = total > 0 ? ((fech / total) * 100).toFixed(1) : '0.0';
+  const pct    = total > 0 ? ((fech / total) * 100).toFixed(1).replace('.', ',') : '0,0';
   const sat    = ind.satisfacaoCliente;
 
   document.getElementById('csc-total').textContent         = fmt(total);
@@ -3433,11 +3618,20 @@ function renderCsc(d) {
   document.getElementById('csc-sum-fora').textContent      = fmt(fora);
 
   // Status / Updated
+  const ehChamados = !!(cscMeta && cscMeta.dados && cscMeta.dados.formato === 'chamados-v1');
+  document.getElementById('csc-tempo-sub').textContent = ehChamados ? 'da abertura à conclusão (tempo corrido)' : 'de atendimento';
+  document.getElementById('cscTituloDept').textContent = ehChamados ? 'Chamados por serviço' : 'Chamados por departamento';
+  document.getElementById('cscSlaSub').textContent = ehChamados ? '· % dos chamados abertos no mês que ficaram no prazo' : '· % cumprido; abaixo de 90% em vermelho';
+  document.getElementById('cscSatisfacaoSub').textContent = ehChamados ? 'não vem no relatório Analítico resumido do CSC' : 'índice de satisfação';
+  document.getElementById('cscRankingSub').textContent = ehChamados ? '· clique na pessoa para ver os chamados' : '';
+  if (ehChamados && d._slaPeriodo != null) document.getElementById('csc-fora-prazo').textContent = `${fmt(ind.chamadosAbertosForaPrazo)} fora do prazo · ${d._slaPeriodo.toFixed(1).replace('.', ',')}% no SLA`;
+
   // A extração é mensal: mais de 40 dias sem nova vira alerta
-  const extraido = d.extraidoEm ? new Date(d.extraidoEm) : null;
+  const extraido = ehChamados ? new Date(cscMeta.dados.periodoFim + 'T23:59:00') : d.extraidoEm ? new Date(d.extraidoEm) : null;
   const dias = extraido ? Math.floor((Date.now() - extraido) / 86400000) : null;
   const velha = dias !== null && dias > 40 && (!cscMeta || cscMeta.fonte !== 'firebase' || cscMeta.maisRecente);
-  marcarStatus('cscStatus', extraido ? `Extração de ${extraido.toLocaleDateString('pt-BR')}${velha ? ` · há ${dias} dias` : ''}` : 'Extração sem data', velha ? 'alerta' : 'ok');
+  marcarStatus('cscStatus', ehChamados ? `Chamados de ${fmtDia(cscMeta.dados.periodoIni)} a ${fmtDia(cscMeta.dados.periodoFim)}${velha ? ` · há ${dias} dias sem envio` : ''}`
+    : extraido ? `Extração de ${extraido.toLocaleDateString('pt-BR')}${velha ? ` · há ${dias} dias` : ''}` : 'Extração sem data', velha ? 'alerta' : 'ok');
   document.getElementById('cscUpdated').textContent = !cscMeta ? ''
     : cscMeta.fonte === 'github' ? 'Arquivo antigo do GitHub. As próximas extrações vão pelo botão "Enviar extração".'
     : `Enviada por ${cscMeta.enviadoPor} em ${dataHora(cscMeta.enviadoEm)}${velha ? ' · está na hora de uma nova extração' : ''}`;
@@ -3498,7 +3692,7 @@ function renderCsc(d) {
       labels: statusItems.map(s => s.nome),
       datasets: [{
         data: statusItems.map(s => s.quantidade),
-        backgroundColor: [azul, alerta, risco, neutro],
+        backgroundColor: [azul, alerta, risco, neutro, corTema('cor-violeta'), corTema('cor-verde'), corTema('cor-rosa')],
         borderColor: corTema('surface'), borderWidth: 2, hoverOffset: 4,
       }]
     },
@@ -3510,23 +3704,27 @@ function renderCsc(d) {
 
   // Ranking atendimento
   const ranking = [...(d.rankingAtendimento || [])].filter(r => !pessoaRemovida(r.nome)).sort((a,b) => b.quantidade - a.quantidade);
-  document.getElementById('cscRanking').innerHTML = ranking.map((r, i) => `
-    <div class="rank-item">
+  const porPessoa = d._porPessoa || null;
+  document.getElementById('cscRanking').innerHTML = ranking.map((r, i) => {
+    const aberta = porPessoa && cscPessoasAbertas.has(r.nome);
+    return `
+    <div class="rank-item${porPessoa ? ' clicavel' : ''}${aberta ? ' aberta' : ''}" ${porPessoa ? `data-pessoa="${esc(r.nome)}" role="button" tabindex="0"` : ''}>
       <div class="rank-num">${i+1}</div>
       ${avatarPessoa(r.nome)}
       <div class="rank-info">
-        <div class="rank-name">${r.nome}</div>
+        <div class="rank-name">${esc(r.nome)}</div>
         <div class="rank-meta">chamados atendidos</div>
       </div>
       <div class="rank-val">${fmt(r.quantidade)}</div>
-    </div>`).join('');
+    </div>${aberta ? listaChamadosCsc(porPessoa[r.nome]) : ''}`;
+  }).join('');
 
   // Departamentos
   const deps = [...(d.chamadosPorDepartamento || [])].sort((a,b) => b.quantidade - a.quantidade);
   const maxDep = deps[0]?.quantidade || 1;
   document.getElementById('cscDepartamentos').innerHTML = deps.map(dep => {
     const pctDep = ((dep.quantidade / maxDep) * 100).toFixed(0);
-    const area = dep.area.replace(/_/g, ' ').replace(/RES_/g, '').trim();
+    const area = esc(dep.area.replace(/RES_/g, '').replace(/_/g, ' ').trim());
     return `
     <div class="proj-item">
       <div class="proj-header">
@@ -3542,6 +3740,29 @@ function renderCsc(d) {
     </div>`;
   }).join('');
 }
+
+function listaChamadosCsc(lista) {
+  const pill = s => STATUS_CONCLUIDOS.includes(s) ? 'pill-green' : s === 'CANCELADO' ? 'pill-yellow' : 'pill-blue';
+  const dt = d => d ? d.toLocaleDateString('pt-BR') : '—';
+  return `<ul class="csc-chamados">${[...lista].sort((a, b) => (b.abertura || 0) - (a.abertura || 0)).map(c => `
+    <li class="csc-chamado">
+      <div class="csc-chamado-topo"><span>Chamado ${esc(c.codigo)}</span><span class="pill ${pill(c.status)}">${esc(c.status.charAt(0) + c.status.slice(1).toLowerCase())}</span></div>
+      <div class="csc-chamado-meta">${esc(servicoCurto(c.servico))}</div>
+      <div class="csc-chamado-meta">Aberto em ${dt(c.abertura)} · concluído em ${dt(c.conclusao)} · SLA ${c.sla >= 0 ? `<span class="${c.sla > 100 ? 'fora' : ''}">${c.sla}%</span>` : '—'}</div>
+    </li>`).join('')}</ul>`;
+}
+function alternarPessoaCsc(nome) {
+  if (cscPessoasAbertas.has(nome)) cscPessoasAbertas.delete(nome); else cscPessoasAbertas.add(nome);
+  renderPeriodoCsc();
+}
+document.addEventListener('click', e => {
+  const item = e.target.closest('#cscRanking .rank-item.clicavel');
+  if (item) alternarPessoaCsc(item.dataset.pessoa);
+});
+document.addEventListener('keydown', e => {
+  const item = e.target.closest && e.target.closest('#cscRanking .rank-item.clicavel');
+  if (item && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); alternarPessoaCsc(item.dataset.pessoa); }
+});
 
 // Carrega CSC quando navegar para a aba
 const _origNavigateTo = navigateTo;

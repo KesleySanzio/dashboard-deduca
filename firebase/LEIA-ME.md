@@ -31,7 +31,7 @@ A tabela acima é o padrão. Um admin pode mudar o que Equipe e Gestão veem (p�
 
 ## Chamados do CSC
 
-Uma vez por mês, alguém baixa o JSON pela extensão **CSC Extrator** (repositório raylanbf/Gestao) e, na página **Chamados do CSC**, clica em **Enviar extração** e escolhe o arquivo. O painel confere os campos e salva na coleção `csc` do Firestore (uma extração por envio, com seletor de mês). Quem pode enviar: admin e o que estiver marcado em **Permissões dos perfis → Enviar extração do CSC** (padrão: Gestão). Só admin exclui uma extração enviada por engano. Enquanto não houver nenhuma no Firestore, a página mostra o `csc.json` antigo do GitHub.
+Uma vez por mês, no CSC: **Relatórios chamados → Analítico resumido**, Considerar *Data de Abertura* de 01/01 até hoje, Grupos **GER_NED/CEAD_Gestão_do_Ambiente_Virtual** e **RES_NED/CEAD_Gestão_do_Ambiente_Virtual**, **Filtrar** e exportar em **CSV**. Na página **Chamados do CSC** do painel, **Enviar extração** e escolher o `ReportBook.csv`. O painel guarda só código, responsável, status, serviço, datas e SLA de cada chamado (descrição e solicitante ficam de fora) e calcula os indicadores por período, com a lista de chamados de cada pessoa. O envio mais novo vale; os anteriores ficam no seletor. O JSON da extensão **CSC Extrator** (raylanbf/Gestao) continua aceito. Quem pode enviar: admin e o que estiver marcado em **Permissões dos perfis → Enviar extração do CSC** (padrão: Gestão). Só admin exclui uma extração enviada por engano. Enquanto não houver nenhuma no Firestore, a página mostra o `csc.json` antigo do GitHub.
 
 ## Uso no dia a dia
 
