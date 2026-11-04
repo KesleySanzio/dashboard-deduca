@@ -915,7 +915,11 @@
   .csc-retorno.ok { background: var(--green-soft); color: var(--green); }
   .csc-retorno.erro { background: var(--red-soft); color: var(--red); }
   .csc-retorno ul { margin: 6px 0 0 18px; }
-  @media (max-width: 900px) { #page-csc header { flex-wrap: wrap; } .csc-acoes { justify-content: flex-start; } }
+  #page-csc header { flex-wrap: wrap; }
+  #page-csc header .logo-area { flex: 1 1 340px; }
+  .csc-acoes { flex: 0 1 auto; max-width: 100%; }
+  .csc-acoes .task-select { max-width: 100%; }
+  @media (max-width: 900px) { .csc-acoes { justify-content: flex-start; } }
   .barra-carregando { height: 2px; background: var(--accent); width: 100%; margin: -12px 0 10px; border-radius: 99px; transition: opacity 0.3s; opacity: 0; }
 
   /* ===================== RESPONSIVO ===================== */
@@ -3435,7 +3439,9 @@ const servicoCurto = s => s.split('/').slice(-2).join(' / ');
 
 // Monta, para o período escolhido, os mesmos números que a tela já desenha
 function agregarChamadosCsc(todos, periodo) {
-  const doPeriodo = periodo === 'tudo' ? todos : todos.filter(c => c.abertura && chaveMes(c.abertura) === periodo);
+  const doPeriodo = periodo === 'tudo' ? todos
+    : periodo.startsWith('ano-') ? todos.filter(c => c.abertura && String(c.abertura.getFullYear()) === periodo.slice(4))
+    : todos.filter(c => c.abertura && chaveMes(c.abertura) === periodo);
   const concluido = c => STATUS_CONCLUIDOS.includes(c.status);
   const emAberto = c => !concluido(c) && c.status !== 'CANCELADO';
   const conta = (lista, chave) => {
@@ -3496,8 +3502,11 @@ function mostrarVersaoCsc(id) {
     cscChamados = expandirChamadosCsc(v.dados);
     const meses = [...new Set(cscChamados.filter(c => c.abertura).map(c => chaveMes(c.abertura)))].sort().reverse();
     const qtd = k => cscChamados.filter(c => c.abertura && chaveMes(c.abertura) === k).length;
+    const anos = [...new Set(meses.map(k => k.slice(0, 4)))];
+    const qtdAno = a => cscChamados.filter(c => c.abertura && String(c.abertura.getFullYear()) === a).length;
     selPeriodo.innerHTML = `<option value="tudo">Período todo (${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)})</option>`
-      + meses.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]}/${k.slice(0, 4)} · ${qtd(k)} chamados</option>`).join('');
+      + (anos.length > 1 ? `<optgroup label="Por ano">${anos.map(a => `<option value="ano-${a}">Ano ${a} · ${qtdAno(a)} chamados</option>`).join('')}</optgroup>` : '')
+      + `<optgroup label="Por mês">${meses.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]}/${k.slice(0, 4)} · ${qtd(k)} chamados</option>`).join('')}</optgroup>`;
     selPeriodo.hidden = false;
     renderPeriodoCsc();
   } else {
@@ -3658,7 +3667,7 @@ function renderCsc(d) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` SLA: ${ctx.parsed.y.toFixed(1).replace('.', ',')}%` } } },
-      scales: eixos({ y: { min: 0, max: 100, ticks: { stepSize: 25, callback: v => v + '%' } } })
+      scales: eixos({ x: { ticks: { maxRotation: 0, autoSkipPadding: 10 } }, y: { min: 0, max: 100, ticks: { stepSize: 25, callback: v => v + '%' } } })
     }
   });
 
@@ -3680,7 +3689,7 @@ function renderCsc(d) {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { position: 'top', align: 'end' } },
-      scales: eixos()
+      scales: eixos({ x: { ticks: { maxRotation: 0, autoSkipPadding: 10 } } })
     }
   });
 
@@ -3735,7 +3744,6 @@ function renderCsc(d) {
         <div class="progress-bar">
           <div class="progress-fill" style="width:${pctDep}%"></div>
         </div>
-        <span class="progress-pct num">${dep.quantidade}</span>
       </div>
     </div>`;
   }).join('');
