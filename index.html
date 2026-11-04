@@ -1167,6 +1167,7 @@
         <button class="sub-tab active" data-permissao="aba-visao-geral" onclick="switchSubTab('visao-geral', this)">Visão geral</button>
         <button class="sub-tab" data-permissao="aba-em-aberto" onclick="switchSubTab('em-aberto', this)">Em aberto</button>
         <button class="sub-tab" data-permissao="aba-em-andamento" onclick="switchSubTab('em-andamento', this)">Em andamento</button>
+        <button class="sub-tab" data-permissao="aba-consultar" onclick="switchSubTab('consultar', this)">Consultar disciplina</button>
       </div>
 
       <!-- SUB-PANEL: VISÃO GERAL -->
@@ -1248,6 +1249,15 @@
           <span class="task-count" id="countAberto"></span>
         </div>
         <div class="task-list" id="listEmAberto"></div>
+      </div>
+
+      <!-- SUB-PANEL: CONSULTAR DISCIPLINA -->
+      <div class="sub-panel" id="subpanel-consultar">
+        <div class="card busca-card">
+          <div class="card-title">Consultar disciplina <span>· todas as tarefas do Deduca; abra a tela de entrega para ver o histórico</span></div>
+          <input id="buscaDisciplina" type="search" class="campo campo-busca busca-disciplina" placeholder="Nome da disciplina, curso, unidade, entrega ou professor" oninput="buscarDisciplina()" aria-label="Buscar disciplina">
+          <div id="buscaResultado" class="busca-resultado"></div>
+        </div>
       </div>
 
       <!-- SUB-PANEL: EM ANDAMENTO -->
@@ -1438,13 +1448,6 @@
         </div>
       </div>
 
-      <!-- Consultar disciplina -->
-      <div class="section-title">Consultar disciplina <span class="section-dica">busca em todo o período, independente do filtro acima</span></div>
-      <div class="card busca-card" style="margin-bottom:16px">
-        <input id="buscaDisciplina" type="search" class="campo campo-busca busca-disciplina" placeholder="Nome da disciplina, curso, unidade, entrega ou professor" oninput="buscarDisciplina()" aria-label="Buscar disciplina">
-        <div id="buscaResultado" class="busca-resultado"></div>
-      </div>
-
       <!-- Produções por pessoa -->
       <div class="section-title">Produções por pessoa <span class="section-dica">clique na pessoa para ver as demandas</span></div>
       <div class="card" style="margin-bottom:16px">
@@ -1545,13 +1548,14 @@ const ITENS_PERMISSAO = [
   { chave: 'bloco-evolucao', nome: 'Evolução mensal', sub: true },
   { chave: 'aba-em-aberto', nome: 'Em aberto' },
   { chave: 'aba-em-andamento', nome: 'Em andamento' },
+  { chave: 'aba-consultar', nome: 'Consultar disciplina' },
   { grupo: 'Ações' },
   { chave: 'csc-enviar', nome: 'Enviar extração do CSC' },
 ];
 const TODAS_PERMISSOES = ITENS_PERMISSAO.filter(i => i.chave).map(i => i.chave);
 // Padrão = como era antes (Equipe sem Relatório, CSC e Visão geral)
 const PERMISSOES_PADRAO = {
-  equipe: ['pg-produtividade', 'pg-emails', 'pg-telefone', 'aba-em-aberto', 'aba-em-andamento'],
+  equipe: ['pg-produtividade', 'pg-emails', 'pg-telefone', 'aba-em-aberto', 'aba-em-andamento', 'aba-consultar'],
   gestao: TODAS_PERMISSOES,
 };
 let permissoesConfig = null; // vindo do Firestore; null = usa o padrão
