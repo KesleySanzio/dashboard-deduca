@@ -1650,9 +1650,9 @@ function tarefaOculta(id) {
 }
 
 function scheduleNextRefresh() {
-  // A planilha é exportada para o dados.json a cada 30 min; conferir a cada 10 min
-  // deixa o painel no máximo ~15 min atrás (10 min + 5 min de cache do GitHub).
-  setInterval(() => fetchData(), 10 * 60 * 1000);
+  // O Apps Script envia o dados.json a cada INTERVALO_EXPORTACAO_MIN; conferir a cada 5 min
+  // deixa o painel no máximo ~10 min atrás da planilha (5 min + 5 min de cache do GitHub).
+  setInterval(() => fetchData(), 5 * 60 * 1000);
   // A idade dos dados ("há 6 min") anda sozinha
   setInterval(atualizarStatusDados, 60 * 1000);
 }
@@ -1786,8 +1786,9 @@ function showLoading(on) {
 }
 
 // ---------- frescor dos dados ----------
-// "updated" no dados.json = hora em que a planilha foi exportada (a cada 30 min, automático)
-const INTERVALO_EXPORTACAO_MIN = 30;
+// "updated" no dados.json = hora em que a planilha foi exportada (acionador do Apps Script do Kesley)
+// Se o acionador mudar de intervalo, mude só este número.
+const INTERVALO_EXPORTACAO_MIN = 10;
 let dadosDe = null;       // Date da exportação que está na tela
 let avisoDados = '';      // resultado do último "Atualizar agora"
 let avisoDadosAte = 0;    // até quando mostrar esse resultado
@@ -1806,7 +1807,7 @@ function atualizarStatusDados() {
   if (el) {
     const proxima = new Date(dadosDe.getTime() + INTERVALO_EXPORTACAO_MIN * 60000);
     el.textContent = Date.now() < avisoDadosAte ? avisoDados
-      : atrasado ? 'Os dados do Deduca deveriam chegar a cada 30 min. Se continuar assim, avise o Kesley.'
+      : atrasado ? `Os dados do Deduca deveriam chegar a cada ${INTERVALO_EXPORTACAO_MIN} min. Se continuar assim, avise o Kesley.`
       : `Próxima sincronização com o Deduca por volta de ${hhmm(proxima)}`;
   }
 }
@@ -3276,7 +3277,7 @@ async function manualRefresh() {
   if (res === 'erro') return;
   avisoDados = res === 'novos'
     ? `Dados novos carregados às ${hhmm(new Date())}.`
-    : `Conferido às ${hhmm(new Date())}: sem novidades. O Deduca é sincronizado a cada 30 min, a próxima por volta de ${hhmm(new Date(dadosDe.getTime() + INTERVALO_EXPORTACAO_MIN * 60000))}.`;
+    : `Conferido às ${hhmm(new Date())}: sem novidades. O Deduca é sincronizado a cada ${INTERVALO_EXPORTACAO_MIN} min, a próxima por volta de ${hhmm(new Date(dadosDe.getTime() + INTERVALO_EXPORTACAO_MIN * 60000))}.`;
   avisoDadosAte = Date.now() + 2 * 60 * 1000;
   atualizarStatusDados();
 }
