@@ -416,6 +416,23 @@
   .people-table td.vazio { text-align: center; color: var(--text-dim); padding: 24px; }
   .col-taxa { width: 22%; }
 
+  /* Relatório: consulta de disciplina */
+  .campo.campo-busca.busca-disciplina { width: 100%; height: 40px; font-size: 14px; }
+  .busca-resultado:empty { display: none; }
+  .busca-resultado { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .busca-resumo { font-size: 12.5px; color: var(--text-dim); }
+  .busca-disc { border: 1px solid var(--border); border-radius: var(--raio); overflow: hidden; }
+  .busca-disc-topo { padding: 10px 14px; background: var(--hover); }
+  .busca-disc-nome { font-size: 14.5px; font-weight: 600; }
+  .busca-disc-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .busca-entrega { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-top: 1px solid var(--rule); }
+  .busca-entrega-info { flex: 1; min-width: 0; }
+  .busca-entrega-nome { font-size: 13.5px; font-weight: 500; }
+  .busca-entrega-meta { font-size: 12px; color: var(--text-dim); margin-top: 1px; }
+  .busca-entrega a.btn-mini { text-decoration: none; flex-shrink: 0; }
+  mark.realce { background: var(--yellow-soft); color: inherit; border-radius: 2px; padding: 0 1px; }
+  @media (max-width: 640px) { .busca-entrega { flex-wrap: wrap; } }
+
   /* Relatório: pessoa que abre a lista das demandas */
   .section-dica { font-size: 13px; font-weight: 400; color: var(--text-dim); }
   #relBodyPessoas tr.rel-pessoa { cursor: pointer; }
@@ -1153,6 +1170,7 @@
         <button class="sub-tab active" data-permissao="aba-visao-geral" onclick="switchSubTab('visao-geral', this)">Visão geral</button>
         <button class="sub-tab" data-permissao="aba-em-aberto" onclick="switchSubTab('em-aberto', this)">Em aberto</button>
         <button class="sub-tab" data-permissao="aba-em-andamento" onclick="switchSubTab('em-andamento', this)">Em andamento</button>
+        <button class="sub-tab" data-permissao="aba-consultar" onclick="switchSubTab('consultar', this)">Consultar disciplina</button>
       </div>
 
       <!-- SUB-PANEL: VISÃO GERAL -->
@@ -1234,6 +1252,15 @@
           <span class="task-count" id="countAberto"></span>
         </div>
         <div class="task-list" id="listEmAberto"></div>
+      </div>
+
+      <!-- SUB-PANEL: CONSULTAR DISCIPLINA -->
+      <div class="sub-panel" id="subpanel-consultar">
+        <div class="card busca-card">
+          <div class="card-title">Consultar disciplina <span>· todas as tarefas do Deduca; abra a tela de entrega para ver o histórico</span></div>
+          <input id="buscaDisciplina" type="search" class="campo campo-busca busca-disciplina" placeholder="Nome da disciplina, curso, unidade, entrega ou professor" oninput="buscarDisciplina()" aria-label="Buscar disciplina">
+          <div id="buscaResultado" class="busca-resultado"></div>
+        </div>
       </div>
 
       <!-- SUB-PANEL: EM ANDAMENTO -->
@@ -1524,13 +1551,14 @@ const ITENS_PERMISSAO = [
   { chave: 'bloco-evolucao', nome: 'Evolução mensal', sub: true },
   { chave: 'aba-em-aberto', nome: 'Em aberto' },
   { chave: 'aba-em-andamento', nome: 'Em andamento' },
+  { chave: 'aba-consultar', nome: 'Consultar disciplina' },
   { grupo: 'Ações' },
   { chave: 'csc-enviar', nome: 'Enviar extração do CSC' },
 ];
 const TODAS_PERMISSOES = ITENS_PERMISSAO.filter(i => i.chave).map(i => i.chave);
 // Padrão = como era antes (Equipe sem Relatório, CSC e Visão geral)
 const PERMISSOES_PADRAO = {
-  equipe: ['pg-produtividade', 'pg-emails', 'pg-telefone', 'aba-em-aberto', 'aba-em-andamento'],
+  equipe: ['pg-produtividade', 'pg-emails', 'pg-telefone', 'aba-em-aberto', 'aba-em-andamento', 'aba-consultar'],
   gestao: TODAS_PERMISSOES,
 };
 let permissoesConfig = null; // vindo do Firestore; null = usa o padrão
@@ -4130,6 +4158,73 @@ function renderRelatorio() {
     </tr>`).join('') || '<tr><td colspan="3" class="vazio">Nenhuma produção no período.</td></tr>';
 }
 
+// ---- Consultar disciplina: procura em todas as tarefas e lista as entregas com a tela do Deduca ----
+const semAcento = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+let buscaTimer = null;
+
+function buscarDisciplina() {
+  clearTimeout(buscaTimer);
+  buscaTimer = setTimeout(mostrarBuscaDisciplina, 150); // espera parar de digitar
+}
+
+function realcar(texto, termos) {
+  let html = esc(texto);
+  for (const t of termos) {
+    if (t.length < 2) continue;
+    // realça sem depender de acento: acha a posição no texto sem acento e marca o trecho original
+    const base = semAcento(texto); let i = base.indexOf(t);
+    if (i >= 0) { const orig = String(texto); html = esc(orig.slice(0, i)) + '<mark class="realce">' + esc(orig.slice(i, i + t.length)) + '</mark>' + esc(orig.slice(i + t.length)); break; }
+  }
+  return html;
+}
+
+function mostrarBuscaDisciplina() {
+  const caixa = document.getElementById('buscaResultado');
+  const termo = semAcento(document.getElementById('buscaDisciplina').value).trim();
+  if (termo.length < 3) { caixa.innerHTML = termo ? '<div class="busca-resumo">Digite pelo menos 3 letras.</div>' : ''; return; }
+  const termos = termo.split(/\s+/);
+  const campos = r => semAcento([r['Nome disciplina tratado'], r['Disciplina'], r['Unidade'], r['Entrega'], r['Projeto'], r['Nome Prof']].join(' | '));
+  const achadas = rawTaskRows.filter(r => { const t = campos(r); return termos.every(x => t.includes(x)); });
+
+  // Agrupa: disciplina (nome tratado + curso + projeto) → entregas (uma tela cada)
+  const grupos = new Map();
+  for (const r of achadas) {
+    const nome = r['Nome disciplina tratado'] || r['Disciplina'] || 'Sem disciplina';
+    const chave = [nome, r['Disciplina'], r['Projeto']].join('¦');
+    // 'Nome Prof' vem como ':(' quando não há professor cadastrado no Deduca
+    const prof = /[A-Za-zÀ-ú]{3}/.test(String(r['Nome Prof'] || '')) ? r['Nome Prof'] : '';
+    if (!grupos.has(chave)) grupos.set(chave, { nome, curso: r['Disciplina'] || '', projeto: r['Projeto'] || '', prof, entregas: new Map() });
+    if (!grupos.get(chave).prof && prof) grupos.get(chave).prof = prof;
+    const g = grupos.get(chave);
+    const idEnt = String(r['Id da entrega'] || r['Tela de Entrega'] || r['Entrega']);
+    if (!g.entregas.has(idEnt)) g.entregas.set(idEnt, { nome: r['Entrega'] || 'Entrega', unidade: r['Unidade'] || '', tela: r['Tela de Entrega'] || '', tarefas: [] });
+    g.entregas.get(idEnt).tarefas.push(r);
+  }
+  const lista = [...grupos.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  if (!lista.length) { caixa.innerHTML = `<div class="busca-resumo">Nada encontrado para "${esc(document.getElementById('buscaDisciplina').value)}".</div>`; return; }
+  const MAX = 25;
+  const contaStatus = tarefas => {
+    const c = s => tarefas.filter(t => t['Status'] === s).length;
+    return [c('Concluído') && `${c('Concluído')} concluída(s)`, c('Em Andamento') && `${c('Em Andamento')} em andamento`, c('Em Aberto') && `${c('Em Aberto')} em aberto`].filter(Boolean).join(' · ');
+  };
+  caixa.innerHTML = `<div class="busca-resumo">${lista.length} disciplina(s) · ${achadas.length} tarefa(s)${lista.length > MAX ? ` · mostrando as ${MAX} primeiras, refine a busca` : ''}</div>`
+    + lista.slice(0, MAX).map(g => `
+    <div class="busca-disc">
+      <div class="busca-disc-topo">
+        <div class="busca-disc-nome">${realcar(g.nome, termos)}</div>
+        <div class="busca-disc-meta">${[g.curso !== g.nome ? realcar(g.curso, termos) : '', esc(g.projeto), g.prof ? 'Prof. ' + realcar(g.prof, termos) : ''].filter(Boolean).join(' · ')}</div>
+      </div>
+      ${[...g.entregas.values()].map(e => `
+      <div class="busca-entrega">
+        <div class="busca-entrega-info">
+          <div class="busca-entrega-nome">${realcar(e.nome, termos)}</div>
+          <div class="busca-entrega-meta">${e.tarefas.length} tarefa(s)${contaStatus(e.tarefas) ? ' · ' + contaStatus(e.tarefas) : ''}</div>
+        </div>
+        ${e.tela ? `<a class="btn-mini" href="${esc(e.tela)}" target="_blank" rel="noopener" title="Abrir a tela de entrega no Deduca (histórico)">Tela de entrega <svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg></a>` : '<span class="traco">sem tela</span>'}
+      </div>`).join('')}
+    </div>`).join('');
+}
+
 // ---- Demandas de cada pessoa (linha que abre embaixo da pessoa) ----
 const relPessoasAbertas = new Set();
 
@@ -4139,7 +4234,8 @@ function linhaDemandas(p) {
     .sort((a, b) => String(b['Inicio'] || '').localeCompare(String(a['Inicio'] || '')))
     .map(r => {
       const titulo = esc(r['Titulo da tarefa'] || r['Título da tarefa'] || 'Sem título');
-      const link = r['Link tarefa'];
+      // A tela da tarefa deixa de existir quando ela é assumida ou concluída; a de entrega guarda o histórico
+      const link = r['Tela de Entrega'] || r['Link tarefa'];
       const entregue = r['Status'] === 'Concluído' && r['Entrega Final da tarefa'] ? ` · entregue em ${formatDate(r['Entrega Final da tarefa'])}` : '';
       const disc = r['Nome disciplina tratado'] || r['Disciplina'] || '';
       // Na pós, a Unidade costuma repetir o nome da disciplina: só mostra quando acrescenta algo
@@ -4147,7 +4243,7 @@ function linhaDemandas(p) {
       const onde = [r['Projeto'], disc, unidade].filter(Boolean).map(esc).join(' · ');
       return `<li class="rel-demanda">
         <div class="rel-demanda-topo">
-          ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener" title="Abrir no Deduca">${titulo}</a>` : `<span>${titulo}</span>`}
+          ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener" title="Abrir a tela de entrega no Deduca">${titulo}</a>` : `<span>${titulo}</span>`}
           <span class="pill ${classe(r['Status'])}">${esc(r['Status'] || '—')}</span>
         </div>
         <div class="rel-demanda-meta">${onde}</div>
