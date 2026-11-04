@@ -909,8 +909,24 @@
   .csc-chamado .fora { color: var(--red); font-weight: 600; }
   .csc-acoes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
   .csc-acoes .task-select { min-width: 210px; }
-  .csc-acoes .so-admin-csc { display: none; }
-  body.perfil-admin .csc-acoes .so-admin-csc:not([hidden]) { display: inline-flex; }
+  .btn-icone {
+    width: 34px; height: 34px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--raio-controle); border: 1px solid var(--control); background: var(--surface); color: var(--text-muted); cursor: pointer;
+  }
+  .btn-icone:hover { background: var(--hover); color: var(--text); }
+  .btn-icone[hidden] { display: none; }
+  .btn-icone.antigo { color: var(--yellow); border-color: var(--yellow-mark); background: var(--yellow-soft); }
+  #cscMes { min-width: 150px; }
+  .hist-lista { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+  .hist-item { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--rule); }
+  .hist-item.atual { background: var(--accent-soft); border-radius: 8px; border-bottom-color: transparent; padding: 12px; }
+  .hist-info { flex: 1; min-width: 0; }
+  .hist-titulo { font-size: 14px; font-weight: 500; }
+  .hist-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .hist-acoes { display: flex; gap: 6px; align-items: center; }
+  .hist-acoes .so-admin-hist { display: none; }
+  body.perfil-admin .hist-acoes .so-admin-hist { display: inline-flex; }
+  .linha-status a.voltar-recente { color: var(--accent-ink); font-weight: 500; }
   .csc-retorno { margin: -8px 0 20px; padding: 10px 14px; border-radius: var(--raio); font-size: 13.5px; }
   .csc-retorno.ok { background: var(--green-soft); color: var(--green); }
   .csc-retorno.erro { background: var(--red-soft); color: var(--red); }
@@ -1262,9 +1278,9 @@
           </div>
         </div>
         <div class="csc-acoes">
-          <select class="task-select" id="cscPeriodo" onchange="renderPeriodoCsc()" aria-label="Período" hidden></select>
-          <select class="task-select" id="cscVersao" onchange="mostrarVersaoCsc(this.value)" aria-label="Escolher o envio" hidden></select>
-          <button type="button" class="btn-mini perigo so-admin-csc" id="cscExcluir" onclick="excluirExtracaoCsc()" hidden>Excluir esta</button>
+          <button type="button" class="btn-icone" id="cscHistorico" onclick="abrirHistoricoCsc()" title="Envios anteriores" aria-label="Envios anteriores" hidden><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></button>
+          <select class="task-select" id="cscAno" onchange="mudouAnoCsc()" aria-label="Período" hidden></select>
+          <select class="task-select" id="cscMes" onchange="renderPeriodoCsc()" aria-label="Mês" hidden></select>
           <button type="button" class="btn-primario btn-compacto" data-permissao="csc-enviar" onclick="document.getElementById('cscArquivo').click()"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>Enviar extração</button>
           <input type="file" id="cscArquivo" accept=".csv,text/csv,.json,application/json" hidden onchange="enviarExtracaoCsc(this)">
         </div>
@@ -3321,17 +3337,16 @@ async function fetchCscData() {
     console.warn('CSC: não foi possível ler as extrações do Firebase.', err);
     cscVersoes = [];
   }
-  const sel = document.getElementById('cscVersao');
+  const historico = document.getElementById('cscHistorico');
   if (cscVersoes.length) {
-    sel.innerHTML = cscVersoes.map((v, i) => `<option value="${v.id}">${i === 0 ? 'Mais recente · ' : ''}${v.dados && v.dados.formato === 'chamados-v1' ? `chamados até ${fmtDia(v.dados.periodoFim)}` : `extração de ${new Date(v.extraidoEm).toLocaleDateString('pt-BR')}`}</option>`).join('');
-    sel.hidden = cscVersoes.length < 2;
+    historico.hidden = false;
     mostrarVersaoCsc(cscVersoes[0].id);
     return;
   }
-  sel.hidden = true;
+  historico.hidden = true;
   cscChamados = null;
-  document.getElementById('cscPeriodo').hidden = true;
-  document.getElementById('cscExcluir').hidden = true;
+  document.getElementById('cscAno').hidden = true;
+  document.getElementById('cscMes').hidden = true;
   try {
     const res = await fetch(`https://raw.githubusercontent.com/KesleySanzio/dashboard-deduca/main/csc.json?t=${Date.now()}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -3485,33 +3500,86 @@ function agregarChamadosCsc(todos, periodo) {
 let cscChamados = null;          // chamados expandidos do envio em tela (formato CSV)
 const cscPessoasAbertas = new Set();
 
+// Ao escolher um ano, aparece o seletor de mês daquele ano ("Ano inteiro" por padrão)
+function mudouAnoCsc() {
+  const ano = document.getElementById('cscAno').value || 'tudo';
+  const selMes = document.getElementById('cscMes');
+  if (ano === 'tudo' || !cscChamados) {
+    selMes.hidden = true;
+    selMes.innerHTML = '';
+  } else {
+    const doAno = cscChamados.filter(c => c.abertura && String(c.abertura.getFullYear()) === ano);
+    const meses = [...new Set(doAno.map(c => chaveMes(c.abertura)))].sort();
+    selMes.innerHTML = '<option value="">Ano inteiro</option>' + meses.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]} · ${fmt(doAno.filter(c => chaveMes(c.abertura) === k).length)}</option>`).join('');
+    selMes.hidden = false;
+  }
+  renderPeriodoCsc();
+}
+
 function renderPeriodoCsc() {
   if (!cscChamados) return;
-  const periodo = document.getElementById('cscPeriodo').value || 'tudo';
-  renderCsc(agregarChamadosCsc(cscChamados, periodo));
+  const ano = document.getElementById('cscAno').value || 'tudo';
+  const mes = document.getElementById('cscMes').value;
+  renderCsc(agregarChamadosCsc(cscChamados, ano === 'tudo' ? 'tudo' : mes || 'ano-' + ano));
+}
+
+// ---- Histórico de envios (relógio): escolher outro envio para ver ----
+function descricaoEnvioCsc(v) {
+  return v.dados && v.dados.formato === 'chamados-v1'
+    ? { titulo: `${fmt(v.dados.total)} chamados · ${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)}`, tipo: 'CSV do relatório Analítico resumido' }
+    : { titulo: `Extração de ${new Date(v.extraidoEm).toLocaleDateString('pt-BR')}`, tipo: 'JSON da extensão CSC Extrator' };
+}
+
+function abrirHistoricoCsc() {
+  const atual = cscMeta && cscMeta.id;
+  abrirModalLargo(`
+    <div class="modal-title">Envios do CSC</div>
+    <div class="modal-subtitle">O mais recente aparece por padrão. Escolha outro para ver como estava.</div>
+    <div class="hist-lista">${cscVersoes.map((v, i) => {
+      const d = descricaoEnvioCsc(v);
+      const ehAtual = v.id === atual;
+      return `<div class="hist-item${ehAtual ? ' atual' : ''}">
+        <div class="hist-info">
+          <div class="hist-titulo">${esc(d.titulo)}${i === 0 ? ' <span class="equipe-tag">mais recente</span>' : ''}${ehAtual ? ' <span class="equipe-tag">em tela</span>' : ''}</div>
+          <div class="hist-meta">Enviado por ${esc(v.enviadoPor)} em ${dataHora(isoFirestore(v.enviadoEm))} · ${d.tipo}</div>
+        </div>
+        <div class="hist-acoes">
+          ${ehAtual ? '' : `<button class="btn-mini" onclick="usarEnvioCsc('${v.id}')">Ver este</button>`}
+          <button class="btn-mini perigo so-admin-hist" onclick="excluirExtracaoCsc('${v.id}')">Excluir</button>
+        </div>
+      </div>`;
+    }).join('')}</div>`);
+}
+
+function usarEnvioCsc(id) {
+  closeTaskModal();
+  mostrarVersaoCsc(id);
 }
 
 function mostrarVersaoCsc(id) {
   const v = cscVersoes.find(x => x.id === id);
   if (!v) return;
-  document.getElementById('cscVersao').value = id;
-  document.getElementById('cscExcluir').hidden = false;
   cscMeta = { fonte: 'firebase', id: v.id, enviadoPor: v.enviadoPor, enviadoEm: isoFirestore(v.enviadoEm), maisRecente: v.id === cscVersoes[0].id, dados: v.dados };
-  const selPeriodo = document.getElementById('cscPeriodo');
+  document.getElementById('cscHistorico').classList.toggle('antigo', !cscMeta.maisRecente);
+  const selAno = document.getElementById('cscAno');
   if (v.dados && v.dados.formato === 'chamados-v1') {
     cscChamados = expandirChamadosCsc(v.dados);
-    const meses = [...new Set(cscChamados.filter(c => c.abertura).map(c => chaveMes(c.abertura)))].sort().reverse();
-    const qtd = k => cscChamados.filter(c => c.abertura && chaveMes(c.abertura) === k).length;
-    const anos = [...new Set(meses.map(k => k.slice(0, 4)))];
-    const qtdAno = a => cscChamados.filter(c => c.abertura && String(c.abertura.getFullYear()) === a).length;
-    selPeriodo.innerHTML = `<option value="tudo">Período todo (${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)})</option>`
-      + (anos.length > 1 ? `<optgroup label="Por ano">${anos.map(a => `<option value="ano-${a}">Ano ${a} · ${qtdAno(a)} chamados</option>`).join('')}</optgroup>` : '')
-      + `<optgroup label="Por mês">${meses.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]}/${k.slice(0, 4)} · ${qtd(k)} chamados</option>`).join('')}</optgroup>`;
-    selPeriodo.hidden = false;
-    renderPeriodoCsc();
+    // Período: "Todo o período" e cada ano, com as datas que ele cobre neste envio
+    const anos = [...new Set(cscChamados.filter(c => c.abertura).map(c => c.abertura.getFullYear()))].sort((a, b) => b - a);
+    const qtdAno = a => cscChamados.filter(c => c.abertura && c.abertura.getFullYear() === a).length;
+    const faixaAno = a => {
+      const ini = v.dados.periodoIni > `${a}-01-01` ? v.dados.periodoIni : `${a}-01-01`;
+      const fim = v.dados.periodoFim < `${a}-12-31` ? v.dados.periodoFim : `${a}-12-31`;
+      return `${fmtDia(ini)} a ${fmtDia(fim)}${fim < `${a}-12-31` ? ', parcial' : ''}`;
+    };
+    selAno.innerHTML = `<option value="tudo">Todo o período (${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)})</option>`
+      + (anos.length > 1 || v.dados.periodoIni.slice(0, 4) !== v.dados.periodoFim.slice(0, 4) ? anos.map(a => `<option value="${a}">${a} (${faixaAno(a)}) · ${fmt(qtdAno(a))} chamados</option>`).join('') : '');
+    selAno.hidden = false;
+    mudouAnoCsc();
   } else {
     cscChamados = null;
-    selPeriodo.hidden = true;
+    selAno.hidden = true;
+    document.getElementById('cscMes').hidden = true;
     renderCsc(v.dados);
   }
 }
@@ -3585,15 +3653,15 @@ async function enviarExtracaoCsc(input) {
   }
 }
 
-async function excluirExtracaoCsc() {
-  if (!cscMeta || cscMeta.fonte !== 'firebase') return;
-  const v = cscVersoes.find(x => x.id === cscMeta.id);
-  if (!v || !confirm(`Excluir este envio do CSC (de ${new Date(v.extraidoEm).toLocaleString('pt-BR')})? Isso não pode ser desfeito.`)) return;
+async function excluirExtracaoCsc(id) {
+  const v = cscVersoes.find(x => x.id === id);
+  if (!v || !confirm(`Excluir o envio "${descricaoEnvioCsc(v).titulo}"? Isso não pode ser desfeito.`)) return;
   try {
     const { fs, db } = fb;
     await fs.deleteDoc(fs.doc(db, 'csc', v.id));
-    registrarLog('acao', 'Excluiu extração do CSC', `extração de ${new Date(v.extraidoEm).toLocaleString('pt-BR')}`);
-    retornoCsc('ok', 'Extração excluída.');
+    registrarLog('acao', 'Excluiu extração do CSC', descricaoEnvioCsc(v).titulo);
+    closeTaskModal();
+    retornoCsc('ok', 'Envio excluído.');
     await fetchCscData();
   } catch(err) {
     console.error(err);
@@ -3644,6 +3712,9 @@ function renderCsc(d) {
   document.getElementById('cscUpdated').textContent = !cscMeta ? ''
     : cscMeta.fonte === 'github' ? 'Arquivo antigo do GitHub. As próximas extrações vão pelo botão "Enviar extração".'
     : `Enviada por ${cscMeta.enviadoPor} em ${dataHora(cscMeta.enviadoEm)}${velha ? ' · está na hora de uma nova extração' : ''}`;
+  if (cscMeta && cscMeta.fonte === 'firebase' && !cscMeta.maisRecente) {
+    document.getElementById('cscUpdated').innerHTML = `Você está vendo um envio anterior (de ${esc(dataHora(cscMeta.enviadoEm))}) · <a href="#" class="voltar-recente" onclick="event.preventDefault(); mostrarVersaoCsc(cscVersoes[0].id)">voltar ao mais recente</a>`;
+  }
 
   // Gráficos
   Object.values(cscCharts).forEach(c => c.destroy());
