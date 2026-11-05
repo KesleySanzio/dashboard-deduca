@@ -3627,7 +3627,7 @@ function mostrarVersaoCsc(id) {
   const selAno = document.getElementById('cscAno');
   if (v.dados && v.dados.formato === 'chamados-v1') {
     cscChamados = expandirChamadosCsc(v.dados);
-    // Período: meses do ano mais recente (o padrão é o mês mais recente), os anos anteriores e todo o período
+    // Período: o ano mais recente inteiro (padrão) e os meses dele, os anos anteriores e todo o período
     const anos = [...new Set(cscChamados.filter(c => c.abertura).map(c => c.abertura.getFullYear()))].sort((a, b) => b - a);
     const qtdAno = a => cscChamados.filter(c => c.abertura && c.abertura.getFullYear() === a).length;
     const faixaAno = a => {
@@ -3640,12 +3640,12 @@ function mostrarVersaoCsc(id) {
     const qtdMes = k => cscChamados.filter(c => c.abertura && chaveMes(c.abertura) === k).length;
     selAno.innerHTML =
       `<optgroup label="${anoAtual}">`
-        + mesesAtual.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]} de ${anoAtual} · ${fmt(qtdMes(k))} chamados</option>`).join('')
         + `<option value="ano-${anoAtual}">${anoAtual} até agora (${faixaAno(anoAtual)}) · ${fmt(qtdAno(anoAtual))} chamados</option>`
+        + mesesAtual.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]} de ${anoAtual} · ${fmt(qtdMes(k))} chamados</option>`).join('')
       + '</optgroup>'
       + (anos.length > 1 ? `<optgroup label="Anos anteriores">${anos.slice(1).map(a => `<option value="ano-${a}">${a} (${faixaAno(a)}) · ${fmt(qtdAno(a))} chamados</option>`).join('')}</optgroup>` : '')
       + `<optgroup label="Tudo"><option value="tudo">Todo o período (${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)}) · ${fmt(cscChamados.length)} chamados</option></optgroup>`;
-    selAno.value = mesesAtual[0] || 'tudo';
+    selAno.value = anoAtual ? 'ano-' + anoAtual : 'tudo';
     selAno.hidden = false;
     renderPeriodoCsc();
   } else {
