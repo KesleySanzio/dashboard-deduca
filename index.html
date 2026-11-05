@@ -1944,6 +1944,7 @@ function switchSubTab(tab, el) {
   if (tab === 'em-andamento') renderEmAndamento();
   if (tab === 'visao-geral' && currentFilter !== 'todos' && currentFilter !== 'Concluído') setFilter('todos');
   marcarCardAtivo();
+  guardarLocalNaUrl();
 }
 
 function populateTaskFilter(selectId, values, placeholder) {
@@ -2343,6 +2344,7 @@ function entrarNoDashboard(user, cad) {
   aplicarPerfil(usuarioAtual.perfil);
   assinarPermissoes();
   atualizarChipUsuario();
+  restaurarLocalDaUrl();
   esconderPortao();
   fs.updateDoc(fs.doc(db, 'usuarios', user.uid), { ultimoAcesso: fs.serverTimestamp() }).catch(() => {});
   // Um registro de acesso por sessão do navegador (recarregar a página não conta de novo)
@@ -3064,6 +3066,7 @@ function renderAll() {
   // Re-renderiza a sub-aba de tarefas que estiver ativa (preenche ao chegar os dados)
   if (document.querySelector('#subpanel-em-aberto.active'))    renderEmAberto();
   if (document.querySelector('#subpanel-em-andamento.active')) renderEmAndamento();
+  if (document.querySelector('#page-relatorio.active') && !document.getElementById('relPeriodo').options.length) initRelatorio();
   atualizarStatusDados();
 }
 
@@ -3929,7 +3932,33 @@ navigateTo = function(page, el) {
   _origNavigateTo(page, el);
   if (page === 'csc') fetchCscData();
   if (page === 'relatorio') initRelatorio();
+  guardarLocalNaUrl();
 };
+
+// ---- Continuar na mesma página ao recarregar (a página e a aba ficam no endereço: #csc, #produtividade/em-andamento) ----
+let restaurandoLocal = false;
+function guardarLocalNaUrl() {
+  if (restaurandoLocal || !usuarioAtual) return;
+  const pagina = document.querySelector('.nav-item.active')?.dataset.page;
+  if (!pagina) return;
+  const aba = (document.querySelector('.sub-tab.active')?.getAttribute('onclick') || '').match(/'([a-z-]+)'/)?.[1];
+  const hash = '#' + pagina + (pagina === 'produtividade' && aba ? '/' + aba : '');
+  if (location.hash !== hash) history.replaceState(null, '', location.pathname + location.search + hash);
+}
+function restaurarLocalDaUrl() {
+  const [pagina, aba] = decodeURIComponent(location.hash.slice(1)).split('/');
+  if (!pagina) return;
+  restaurandoLocal = true;
+  try {
+    const item = document.querySelector(`.nav-item[data-page="${pagina}"]:not(.sem-permissao)`);
+    if (item && !item.classList.contains('active')) navigateTo(pagina, item);
+    const botao = aba && document.querySelector(`.sub-tab[onclick*="'${aba}'"]:not(.sem-permissao)`);
+    if (botao && !botao.classList.contains('active')) botao.click();
+  } finally {
+    restaurandoLocal = false;
+  }
+  guardarLocalNaUrl(); // se a página do endereço não é permitida, o endereço passa a mostrar onde a pessoa está
+}
 
 // ===================== RELATÓRIO GERENCIAL =====================
 let relInited = false;
