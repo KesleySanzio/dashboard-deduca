@@ -3581,6 +3581,13 @@ function agregarChamadosCsc(todos, periodo) {
 let cscChamados = null;          // chamados expandidos do envio em tela (formato CSV)
 const cscPessoasAbertas = new Set();
 
+// O filtro do CSC pode ir além do dia da exportação (ex.: até 30/11 exportado em 04/11):
+// os dados só vão até o dia do envio.
+function fimDadosCsc(dados, enviadoEm) {
+  const envio = enviadoEm ? isoDia(new Date(enviadoEm)) : null;
+  return envio && envio < dados.periodoFim ? envio : dados.periodoFim;
+}
+
 function renderPeriodoCsc() {
   if (!cscChamados) return;
   renderCsc(agregarChamadosCsc(cscChamados, document.getElementById('cscAno').value || 'tudo'));
@@ -3589,7 +3596,7 @@ function renderPeriodoCsc() {
 // ---- Histórico de envios (relógio): escolher outro envio para ver ----
 function descricaoEnvioCsc(v) {
   return v.dados && v.dados.formato === 'chamados-v1'
-    ? { titulo: `${fmt(v.dados.total)} chamados · ${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)}`, tipo: 'CSV do relatório Analítico resumido' }
+    ? { titulo: `${fmt(v.dados.total)} chamados · ${fmtDia(v.dados.periodoIni)} a ${fmtDia(fimDadosCsc(v.dados, isoFirestore(v.enviadoEm)))}`, tipo: 'CSV do relatório Analítico resumido' }
     : { titulo: `Extração de ${new Date(v.extraidoEm).toLocaleDateString('pt-BR')}`, tipo: 'JSON da extensão CSC Extrator' };
 }
 
@@ -3632,7 +3639,8 @@ function mostrarVersaoCsc(id) {
     const qtdAno = a => cscChamados.filter(c => c.abertura && c.abertura.getFullYear() === a).length;
     const faixaAno = a => {
       const ini = v.dados.periodoIni > `${a}-01-01` ? v.dados.periodoIni : `${a}-01-01`;
-      const fim = v.dados.periodoFim < `${a}-12-31` ? v.dados.periodoFim : `${a}-12-31`;
+      const fimDados = fimDadosCsc(v.dados, isoFirestore(v.enviadoEm));
+      const fim = fimDados < `${a}-12-31` ? fimDados : `${a}-12-31`;
       return `${fmtDia(ini)} a ${fmtDia(fim)}`;
     };
     const anoAtual = anos[0];
@@ -3640,11 +3648,11 @@ function mostrarVersaoCsc(id) {
     const qtdMes = k => cscChamados.filter(c => c.abertura && chaveMes(c.abertura) === k).length;
     selAno.innerHTML =
       `<optgroup label="${anoAtual}">`
-        + `<option value="ano-${anoAtual}">${anoAtual} até agora (${faixaAno(anoAtual)}) · ${fmt(qtdAno(anoAtual))} chamados</option>`
+        + `<option value="ano-${anoAtual}">${anoAtual} (${faixaAno(anoAtual)}) · ${fmt(qtdAno(anoAtual))} chamados</option>`
         + mesesAtual.map(k => `<option value="${k}">${MESES_LONGOS[+k.slice(5) - 1]} de ${anoAtual} · ${fmt(qtdMes(k))} chamados</option>`).join('')
       + '</optgroup>'
       + (anos.length > 1 ? `<optgroup label="Anos anteriores">${anos.slice(1).map(a => `<option value="ano-${a}">${a} (${faixaAno(a)}) · ${fmt(qtdAno(a))} chamados</option>`).join('')}</optgroup>` : '')
-      + `<optgroup label="Tudo"><option value="tudo">Todo o período (${fmtDia(v.dados.periodoIni)} a ${fmtDia(v.dados.periodoFim)}) · ${fmt(cscChamados.length)} chamados</option></optgroup>`;
+      + `<optgroup label="Tudo"><option value="tudo">Todo o período (${fmtDia(v.dados.periodoIni)} a ${fmtDia(fimDadosCsc(v.dados, isoFirestore(v.enviadoEm)))}) · ${fmt(cscChamados.length)} chamados</option></optgroup>`;
     selAno.value = anoAtual ? 'ano-' + anoAtual : 'tudo';
     selAno.hidden = false;
     renderPeriodoCsc();
@@ -3775,10 +3783,11 @@ function renderCsc(d) {
   if (ehChamados && d._slaPeriodo != null) document.getElementById('csc-fora-prazo').textContent = `${fmt(ind.chamadosAbertosForaPrazo)} fora do prazo · ${d._slaPeriodo.toFixed(1).replace('.', ',')}% no SLA`;
 
   // A extração é mensal: mais de 40 dias sem nova vira alerta
-  const extraido = ehChamados ? new Date(cscMeta.dados.periodoFim + 'T23:59:00') : d.extraidoEm ? new Date(d.extraidoEm) : null;
+  const fimCsc = ehChamados ? fimDadosCsc(cscMeta.dados, cscMeta.enviadoEm) : null;
+  const extraido = ehChamados ? new Date(fimCsc + 'T23:59:00') : d.extraidoEm ? new Date(d.extraidoEm) : null;
   const dias = extraido ? Math.floor((Date.now() - extraido) / 86400000) : null;
   const velha = dias !== null && dias > 40 && (!cscMeta || cscMeta.fonte !== 'firebase' || cscMeta.maisRecente);
-  marcarStatus('cscStatus', ehChamados ? `Chamados de ${fmtDia(cscMeta.dados.periodoIni)} a ${fmtDia(cscMeta.dados.periodoFim)}${velha ? ` · há ${dias} dias sem envio` : ''}`
+  marcarStatus('cscStatus', ehChamados ? `Chamados de ${fmtDia(cscMeta.dados.periodoIni)} a ${fmtDia(fimCsc)}${velha ? ` · há ${dias} dias sem envio` : ''}`
     : extraido ? `Extração de ${extraido.toLocaleDateString('pt-BR')}${velha ? ` · há ${dias} dias` : ''}` : 'Extração sem data', velha ? 'alerta' : 'ok');
   document.getElementById('cscUpdated').textContent = !cscMeta ? ''
     : cscMeta.fonte === 'github' ? 'Arquivo antigo do GitHub. As próximas extrações vão pelo botão "Enviar extração".'
